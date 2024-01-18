@@ -1,0 +1,325 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2022.11.28.05.16.02;	author picone;	state Exp;
+branches;
+next	;
+
+
+desc
+@initial version.
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@File: AAREADME.txt
+Database: TUH Abnormal EEG Corpus
+Version: v3.0.0
+-------------------------------------------------------------------------------
+
+When you use this specific corpus in your research or technology
+development, we ask that you reference the corpus using this
+publication:
+
+ Lopez, S. (2017). Automated Identification of Abnormal EEGs. 
+ Temple University.
+
+This publication can be retrieved from:
+
+ https://www.isip.piconepress.com/publications/ms_theses/2017/abnormal/thesis/
+
+Our preferred reference for the TUH EEG Corpus, from which this
+seizure corpus was derived, is:
+
+ Obeid, I., & Picone, J. (2016). The Temple University Hospital EEG
+ Data Corpus. Frontiers in Neuroscience, Section Neural Technology,
+ 10, 196. http://dx.doi.org/10.3389/fnins.2016.00196.
+
+This file contains information about the demographics and relevant
+statistics for the TUH EEG Abnormal Corpus, which contains EEG records
+that are classified as clinically normal or abnormal.
+
+FILENAME STRUCTURE:
+
+A typical filename in this corpus is:
+
+ edf/eval/abnormal/01_tcp_ar/aaaaamye_s001_t000.edf
+
+The first segment, "edf/", is a directory name for the directory containing
+the data, which consists of edf files (*.edf).
+
+The second segment denotes either the evaluation data ("/eval") or
+the training data ("/train").
+
+The third segment ("normal") denotes whether the EEG is "normal" or
+"abnormal".
+
+The fourth segment ("/01_tcp_ar") denotes the type of channel configuration
+for the EEG. "/01_tcp_ar" refers to an AR reference configuration.
+In this corpus there is only one type of configuration used.
+
+The last segment is the filename ("aaaaamye_s001_t000.edf"). This
+includes the subject identifier ("aaaaamye"), the session number
+("s001") and a token number ("t000"). EEGs are split into a series of
+files starting with *t000.edf, *t001.edf, ...  These represent pruned
+EEGs, so the original EEG is split into these segments, and
+uninteresting parts of the original recording were deleted (common in
+clinical practice).
+
+The *.edf contains the signal data.
+
+DATABASE SUMMARY
+
+This subset of TUH EEG is 60G in size:
+
+ nedc_000_[1]: du -sLBM edf
+ 59995M	edf
+
+It contains 2,993 *.edf files.
+
+SUBJECT, SESSION AND FILE STATISTICS:
+
+The subject statistics are summarized in the table below:
+
+Subjects:
+
+ |----------------------------------------------|
+ | Description |  Normal  | Abnormal |  Total   |
+ |-------------+----------+----------+----------|
+ | Evaluation  |      148 |      105 |      253 |
+ |-------------+----------+----------+----------|
+ | Train       |    1,237 |      893 |    2,130 |
+ |-------------+----------+----------+----------|
+ | Total       |    1,385 |      998 |    2,383 |
+ |----------------------------------------------|
+ 
+It is important to note that (1) there is no overlap between subjects
+in the evaluation and training sets, (2) subjects only appear once in
+the evaluation set as either normal or abnormal (but not both), and
+(3) some subjects appear more than once in the training set.
+
+Therefore, there are 253 unique subjects in the evaluation set, but
+only 2,076 unique subjects in the training set. Hence, there are 54
+subjects that appear as both normal and abnormal in the training
+set. This was a conscious design decision as we wanted some examples
+of subjects who demonstrated both morphologies.
+ 
+Subjects can have multiple sessions. Below is a table describing the
+distribution of sessions:
+
+Sessions:
+
+ |----------------------------------------------|
+ | Description |  Normal  | Abnormal |  Total   |
+ |-------------+----------+----------+----------|
+ | Evaluation  |      150 |      126 |      276 |
+ |-------------+----------+----------+----------|
+ | Train       |    1,371 |    1,346 |    2,717 |
+ |-------------+----------+----------+----------|
+ | Total       |    1,521 |    1,472 |    2,993 |
+ |----------------------------------------------|
+
+More than one session from a subject appears in this database. We
+selected files/sessions based on their relevance to the
+normal/abnormal detection problem - whether they display some
+challenging or interesting behavior. However, unlike v1.0.0, the
+evaluation set and training set are 100% disjoint - no subject
+appears in both partitions.
+
+Most of the subjects in the evaluation set appear once (average
+number of sessions per subject is 1.09), while subjects in the
+training set have an average of 1.28 sessions.
+
+Some basic statistics on the number of files and the number of hours
+of data are given below:
+
+Size (No. of Files / Hours of Data):
+
+ |----------------------------------------------------------------------|
+ | Description |      Normal      |     Abnormal     |      Total       |
+ |-------------+------------------+------------------+------------------|
+ | Evaluation  |   150 (   55.46) |   126 (   47.48) |   276 (  102.94) |
+ |-------------+------------------+------------------+------------------|
+ | Train       | 1,371 (  512.01) | 1,346 (  526.05) | 2,717 (1,038.06) |
+ |-------------+------------------+------------------+------------------|
+ | Total       | 1,521 (  567.47) | 1,472 (  573.53) | 2,993 (1,142.00) |
+ |----------------------------------------------------------------------|
+
+Only one file from each session was included in this corpus. It is
+important to point out that each EEG session is comprised of several
+EDF files (the records are pruned before they are stored in the
+database).  A single file was selected from a session - typically the
+longest file in the session. We did not include multiple files from
+the same session. So the number of files and number of sessions are
+identical.
+
+Each file selected from a session was chosen by considering the
+length of the file (all the files in this corpus are longer than 15
+minutes) and/or the presence of relevant activity.
+
+INTER-RATER AGREEMENT:
+
+A summary of the distribution of normal/abnormal EEGs is shown below:
+
+Evaluation:
+
+ |-----------------------------------------------------------|
+ | Description |    Files     |   Sessions   |    Subjects   | 
+ |-------------+--------------+--------------+---------------|
+ | Abnormal    |   126 ( 46%) |   126 ( 46%) |    105 ( 42%) |
+ |-------------+--------------+--------------+---------------|
+ | Normal      |   150 ( 54%) |   150 ( 54%) |    148 ( 58%) |
+ |-------------+--------------+--------------+---------------|
+ | Total       |   276 (100%) |   276 (100%) |    253 (100%) |
+ |-----------------------------------------------------------|
+
+Train:
+
+ |-----------------------------------------------------------|
+ | Description |    Files     |   Sessions   |    Subjects   | 
+ |-------------+--------------+--------------+---------------|
+ | Abnormal    | 1,346 ( 50%) | 1,346 ( 50%) |    893 ( 42%) |
+ |-------------+--------------+--------------+---------------|
+ | Normal      | 1,371 ( 50%) | 1,371 ( 50%) |  1,237 ( 58%) |
+ |-------------+--------------+--------------+---------------|
+ | Total       | 2,717 (100%) | 2,717 (100%) |  2,130 (100%) |
+ |-----------------------------------------------------------|
+
+In our v3.0.0 release, we manually reviewed the data to determine the
+extent to which our assessments were in agreement with the associated
+EEG reports. The outcome of this analysis was as follows:
+
+Evaluation:
+
+ |---------------------------------------------------|
+ | Description         |    Files     |   Subjects   |
+ |---------------------+--------------+--------------|
+ | Positive Agreement* |   276 (100%) |   254 (100%) |
+ |---------------------+--------------+--------------|
+ | Negative Agreement* |     0 (  0%) |     0 (  0%) |
+ |---------------------------------------------------|
+
+Train:
+
+ |---------------------------------------------------|
+ | Description         |    Files     |   Subjects   |
+ |---------------------+--------------+--------------|
+ | Positive Agreement* | 2,700 ( 99%) | 2,110 ( 97%) |
+ |---------------------+--------------+--------------|
+ | Negative Agreement* |    27 (  1%) |    21 (  1%) |
+ |---------------------------------------------------|
+
+Our annotators made their decisions based on evidence in the signal
+for the specific segment chosen. The EEG report contains a finding
+based on the subject history and overall EEG session.
+
+DEMOGRAPHICS:
+
+This section contains general information about the subjects' age and
+gender. It is important to point out that the information is reported
+by subject. Since the data spans over several years, some subjects
+might be represented more than once (with different ages) in the age
+section.
+
+Gender Statistics (reported by subject):
+
+Evaluation:
+
+ |--------------------------------------------|
+ | Description  |    Files     |   Subjects   |
+ |--------------+--------------+--------------+
+ | (F) Abnormal |    63 ( 23%) |    51 ( 20%) |
+ |--------------+--------------+--------------+
+ | (M) Abnormal |    63 ( 23%) |    54 ( 21%) |
+ |--------------+--------------+--------------+
+ | (F) Normal   |    85 ( 31%) |    84 ( 34%) |
+ |--------------+--------------+--------------+
+ | (M) Normal   |    65 ( 23%) |    64 ( 25%) |
+ |--------------+--------------+--------------+
+ | Total        |   276 (100%) |   253 (100%) |
+ |--------------------------------------------|
+
+Train:
+
+ |--------------------------------------------|
+ | Description  |    Files     |   Subjects   |
+ |--------------+--------------+--------------+
+ | (F) Abnormal |   679 ( 25%) |   454 ( 21%) |
+ |--------------+--------------+--------------+
+ | (M) Abnormal |   667 ( 25%) |   439 ( 21%) |
+ |--------------+--------------+--------------+
+ | (F) Normal   |   768 ( 28%) |   691 ( 32%) |
+ |--------------+--------------+--------------+
+ | (M) Normal   |   603 ( 22%) |   546 ( 26%) |
+ |--------------+--------------+--------------+
+ | Total        | 2,717 (100%) | 2,130 (100%) |
+ |--------------------------------------------|
+
+Age Distribution:
+
+Below is a distribution of subject age based on the first session
+for each subject:
+
+ |----------------------------------------------------------| 
+ |              |                   Count                   |
+ |              |---------------------+---------------------|
+ |              |      Evaluation     |        Train        | 
+ |     Age      |----------+----------+----------+----------|
+ | Distribution | Abnormal |  Normal  | Abnormal |  Normal  |
+ |--------------+----------+----------+----------+----------|
+ |         0-10 |        0 |        0 |        5 |        3 |
+ |        10-20 |        2 |        4 |       15 |       39 |
+ |        20-30 |        6 |       27 |       85 |      239 |
+ |        30-40 |       10 |       37 |       80 |      225 |
+ |        40-50 |       20 |       27 |      151 |      368 |
+ |        50-60 |       21 |       23 |      201 |      237 |
+ |        60-70 |       13 |       17 |      171 |      139 |
+ |        70-80 |       18 |        7 |      116 |       49 |
+ |        80-90 |       14 |        5 |       63 |       34 |
+ |       90-100 |        1 |        1 |        6 |        4 |
+ |--------------+----------+----------+----------+----------|
+ |        TOTAL |      105 |      148 |      893 |    1,237 |
+ |----------------------------------------------------------| 
+
+Since sessions can be separated in time by a significant amount of
+time (often years), below is a distribution of age by session:
+
+ |----------------------------------------------------------| 
+ |              |                   Count                   |
+ |              |---------------------+---------------------|
+ |              |      Evaluation     |        Train        | 
+ |     Age      |----------+----------+----------+----------|
+ | Distribution | Abnormal |  Normal  | Abnormal |  Normal  |
+ |--------------+----------+----------+----------+----------|
+ |         0-10 |        0 |        0 |        5 |        3 |
+ |        10-20 |        2 |        4 |       19 |       43 |
+ |        20-30 |        7 |       27 |      129 |      263 |
+ |        30-40 |       11 |       38 |      110 |      252 |
+ |        40-50 |       25 |       27 |      225 |      310 |
+ |        50-60 |       28 |       23 |      310 |      260 |
+ |        60-70 |       14 |       18 |      286 |      146 |
+ |        70-80 |       23 |        7 |      163 |       54 |
+ |        80-90 |       15 |        5 |       93 |       36 |
+ |       90-100 |        1 |        1 |        6 |        4 |
+ |--------------+----------+----------+----------+----------|
+ |        TOTAL |      126 |      150 |    1,346 |    1,371 |
+ |----------------------------------------------------------| 
+
+---
+If you have any additional comments or questions about this data, please direct
+them to help@@nedcdata.org.
+
+Best regards, 
+
+Joseph Picone
+joseph.picone@@gmail.com
+@

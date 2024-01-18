@@ -1,0 +1,12 @@
+*.pkl
+*.tar.gz
+*.zip
+*.csv
+*.pth
+*.pyc
+*.txt
+*.png
+*.xlsx
+*.yaml
+*.json
+lightning_logs/version_0/events.out.tfevents.1705231227.newton3.544530.0
