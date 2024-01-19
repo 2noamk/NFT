@@ -191,19 +191,21 @@ def plot_fourier(seasonality_thetas):
     plt.show()
   
    
-def save_predictions_in_excel(y=None, predictions=None, horizon=None, n_vars=None, path_to_save_prediction_excel=None):
+def save_predictions_in_excel(y=None, predictions=None, idx=None, horizon=None, n_vars=None,
+                              path_to_save_prediction_excel=None, excel_name=None):
     """
     function takes the first time stamp predicted for every sample and saves it in an Excel file.
     i.e; function does not save later horizon points.
     """
-    def reshape_series(s):
-        if s is not None: 
-            if not isinstance(s, np.ndarray): s.cpu().numpy()
-            s = s.reshape(-1, horizon, n_vars)[:, 0, :]
+    def get_series(s):
+        if s is not None:
+            if not isinstance(s, np.ndarray): s = s.cpu().numpy()
+            if idx is not None: s = s.reshape(-1, horizon, n_vars)[idx, :, :]
         return s
+    
 
-    actual_series = reshape_series(y)
-    predicted_series = reshape_series(predictions)
+    actual_series = get_series(y)
+    predicted_series = get_series(predictions)
 
     data = {}
     for series in range(n_vars):
@@ -215,7 +217,7 @@ def save_predictions_in_excel(y=None, predictions=None, horizon=None, n_vars=Non
     df = pd.DataFrame(data)
 
     if path_to_save_prediction_excel is not None:
-        excel_filename = path_to_save_prediction_excel + f"predictions.xlsx"
+        excel_filename = f"{path_to_save_prediction_excel}{excel_name}.xlsx"
         df.to_excel(excel_filename, index=False)
 
     return df 
@@ -281,23 +283,23 @@ def train_model(dataset, epochs, model, train_X, train_y, val_X, val_y, lookback
         
         print(f'Epoch {str(epoch + 1).zfill(len(str(epochs)))}/{epochs}, loss: {train_loss:.4f} - val_loss: {val_loss:.4f}')
             
-        if (epoch % print_epoch == 0 or epoch == epochs - 1) and epoch != 0:
-            plot_predictions(
-                y=val_y, 
-                predictions=val_predictions,
-                horizon=horizon, 
-                n_vars=n_vars,
-                epoch=epoch, 
-                path_to_save_prediction_plots=path_to_save_prediction_plots
-                )
-            plot_loss_over_epoch_graph(
-                epoch, 
-                train_losses, 
-                val_losses, 
-                lookback=lookback,
-                horizon=horizon,
-                path_to_save_loss_plots=None
-                )
+        # if (epoch % print_epoch == 0 or epoch == epochs - 1) and epoch != 0:
+        #     plot_predictions(
+        #         y=val_y, 
+        #         predictions=val_predictions,
+        #         horizon=horizon, 
+        #         n_vars=n_vars,
+        #         epoch=epoch, 
+        #         path_to_save_prediction_plots=path_to_save_prediction_plots
+        #         )
+        #     plot_loss_over_epoch_graph(
+        #         epoch, 
+        #         train_losses, 
+        #         val_losses, 
+        #         lookback=lookback,
+        #         horizon=horizon,
+        #         path_to_save_loss_plots=None
+        #         )
     
     print(f"The min train loss is {min_train_loss} at epoch {min_train_loss_epoch}\n"
         f"The min val loss is {min_val_loss} at epoch {min_val_loss_epoch}\n")  

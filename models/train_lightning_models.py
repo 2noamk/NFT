@@ -1,21 +1,16 @@
 import sys
 import torch
 import numpy as np
-import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
+from nbeats_pytorch.model import NBeatsNet
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
-
 from models.training_functions import get_data, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel, get_model_name, get_path, save_model
-
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT/')
-from NFT import NFT
-
-sys.path.append('/home/noam.koren/multiTS/NFT/models/baseline_models/')
-from base_models import TCN, TimeSeriesTransformer, LSTM
+from models.NFT.NFT import NFT
+from models.baseline_models.base_models import TCN, TimeSeriesTransformer, LSTM
 
 torch.set_float32_matmul_precision('high')
 
@@ -78,6 +73,13 @@ class Model(pl.LightningModule):
                 hidden_dim=50, 
                 num_layers=2
             )
+        elif model == 'nbeats':
+            self.model = NBeatsNet(
+                stack_types=(NBeatsNet.TREND_BLOCK_BLOCK, NBeatsNet.SEASONALITY_BLOCK),
+                nb_blocks_per_stack=2,
+                thetas_dim=(4,8),
+                forecast_length=horizon,
+                backcast_length=lookback)
         self.data = data 
         self.lookback=lookback 
         self.horizon=horizon 
@@ -372,7 +374,7 @@ def main():
                             layers_type=layers_type,
                             num_channels=num_channels
                     )
-                        
+    
     else:       
         if data in ['eeg_single', 'ecg_single', 'noaa']:
             for series in single_data_to_series_list[data]:
