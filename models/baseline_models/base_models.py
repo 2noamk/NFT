@@ -595,7 +595,7 @@ class SeasonalityBlock(Block):
             super(SeasonalityBlock, self).__init__(units, nb_harmonics, backcast_length,
                                                    forecast_length, share_thetas=True)
         else:
-            super(SeasonalityBlock, self).__init__(units, forecast_length, backcast_length,
+            super(SeasonalityBlock, self).__init__(units, thetas_dim, backcast_length,
                                                    forecast_length, share_thetas=True)
 
     def forward(self, x):

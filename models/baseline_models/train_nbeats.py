@@ -172,9 +172,9 @@ def train(
     
   
 def main():
-    data = 'eeg_single'
-    epochs = [10]
-    blocks = 3
+    data = 'ecg'
+    epochs = [7]
+    blocks = 2
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:

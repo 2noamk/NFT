@@ -17,16 +17,11 @@ torch.set_float32_matmul_precision('high')
 
 class Model(pl.LightningModule):
     def __init__(self,
-        model='nft',
         lookback=15, 
         horizon=1, 
         num_vars=1,
         nb_blocks_per_stack=2,
         thetas_dim=(4, 8),
-        layers_type='tcn',
-        num_channels=[25, 50], 
-        kernel_size=2, 
-        dropout=0.2,
         data='noaa', 
         print_stats=False,
         n_series=36, 
@@ -39,7 +34,7 @@ class Model(pl.LightningModule):
             forecast_length=horizon,
             backcast_length=lookback,
             nb_blocks_per_stack=nb_blocks_per_stack,
-            thetas_dim=(4,8),
+            thetas_dim=thetas_dim,
             )
         self.data = data 
         self.lookback=lookback 
@@ -215,10 +210,10 @@ def train_lightning_model(
     lookback, 
     horizon, 
     num_epochs, 
-    blocks, 
-    out_txt_name,
-    print_stats, 
-    series,
+    blocks,
+    series, 
+    out_txt_name='',
+    print_stats=False, 
     thetas_dim=(4,8),
     layers_type='tcn',
     num_channels=None
@@ -230,89 +225,81 @@ def train_lightning_model(
     
     train_metrics_idx, val_metrics_idx, test_metrics_idx = [], [], []
     
-    for idx in range(num_of_vars):
-        model = Model(
-            model=model_type,
-            lookback=lookback, 
-            horizon=horizon, 
-            num_vars=num_of_vars,
-            nb_blocks_per_stack=blocks,
-            num_channels=num_channels, 
-            thetas_dim=thetas_dim,
-            layers_type=layers_type,
-            kernel_size=2, 
-            dropout=0.2,
-            data=data, 
-            print_stats=print_stats,
-            n_series=n_series, 
-            series=series,
-            idx=idx,
-            )
-
-        trainer = pl.Trainer(
-            max_epochs=num_epochs, 
-            accelerator='cuda', 
-            devices=torch.cuda.device_count(),
-            log_every_n_steps=32
-        )
-
-        trainer.fit(model)
-        
-        trainer.test(model)
-            
-        train_metrics_idx.append(model.compute_metrics(model.train_dataloader()))
-        val_metrics_idx.append(model.compute_metrics(model.val_dataloader()))
-        test_metrics_idx.append(model.compute_metrics(model.test_dataloader()))
-        
-        print(f"test metrics = {train_metrics_idx[-1]}")
-
-    def aggregate_metrics(metrics_list):
-        aggregated_metrics = {}
-        for metric in metrics_list[0].keys():
-            aggregated_metrics[metric] = np.mean([m[metric] for m in metrics_list])
-        return aggregated_metrics
-
-    train_metrics = aggregate_metrics(train_metrics_idx)
-    val_metrics = aggregate_metrics(val_metrics_idx)
-    test_metrics = aggregate_metrics(test_metrics_idx)
-
-    print("Aggregated Train Metrics:", train_metrics)
-    print("Aggregated Validation Metrics:", val_metrics)
-    print("Aggregated Test Metrics:", test_metrics)
-
-    add_results_to_excel(
-        model=model_type, 
-        data=data, 
+    # for idx in range(num_of_vars):
+    model = Model(
         lookback=lookback, 
         horizon=horizon, 
-        epochs=num_epochs, 
-        blocks=blocks, 
-        series=series, 
-        train_mse=model.train_loss[-1], 
-        test_mse=model.test_loss[-1], 
-        train_smape=train_metrics['smape'], 
-        test_smape=test_metrics['smape'], 
-        train_mape=train_metrics['mape'], 
-        test_mape=test_metrics['mape'], 
-        train_mase=train_metrics['mase'], 
-        test_mase=test_metrics['mase']
+        num_vars=num_of_vars,
+        nb_blocks_per_stack=blocks,
+        thetas_dim=thetas_dim,
+        data=data, 
+        print_stats=print_stats,
+        n_series=n_series, 
+        series=series,
+        idx=0,
         )
+
+    trainer = pl.Trainer(
+        max_epochs=num_epochs, 
+        accelerator='cuda', 
+        devices=torch.cuda.device_count(),
+        log_every_n_steps=32
+    )
+
+    trainer.fit(model)
+    
+    trainer.test(model)
+            
+        # train_metrics_idx.append(model.compute_metrics(model.train_dataloader()))
+        # val_metrics_idx.append(model.compute_metrics(model.val_dataloader()))
+        # test_metrics_idx.append(model.compute_metrics(model.test_dataloader()))
+        
+        # print(f"test metrics = {train_metrics_idx[-1]}")
+
+    # def aggregate_metrics(metrics_list):
+    #     aggregated_metrics = {}
+    #     for metric in metrics_list[0].keys():
+    #         aggregated_metrics[metric] = np.mean([m[metric] for m in metrics_list])
+    #     return aggregated_metrics
+
+    # train_metrics = aggregate_metrics(train_metrics_idx)
+    # val_metrics = aggregate_metrics(val_metrics_idx)
+    # test_metrics = aggregate_metrics(test_metrics_idx)
+
+    # print("Aggregated Train Metrics:", train_metrics)
+    # print("Aggregated Validation Metrics:", val_metrics)
+    # print("Aggregated Test Metrics:", test_metrics)
+
+    # add_results_to_excel(
+    #     model=model_type, 
+    #     data=data, 
+    #     lookback=lookback, 
+    #     horizon=horizon, 
+    #     epochs=num_epochs, 
+    #     blocks=blocks, 
+    #     series=series, 
+    #     train_mse=model.train_loss[-1], 
+    #     test_mse=model.test_loss[-1], 
+    #     train_smape=train_metrics['smape'], 
+    #     test_smape=test_metrics['smape'], 
+    #     train_mape=train_metrics['mape'], 
+    #     test_mape=test_metrics['mape'], 
+    #     train_mase=train_metrics['mase'], 
+    #     test_mase=test_metrics['mase']
+    #     )
     
     return
 
-
 def main():
     model_type = 'nbeats'
-    data = 'chorales'
-    out_txt_name = f"{model_type}_{data}.txt"
-    num_channels = [2, 2]
-    epochs = [10]
-    blocks = 2
-    layers_type = 'tcn'
+    data = 'eeg_single'
+    epochs = [1]
+    blocks = 3
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:
         for series in single_data_to_series_list[data]:
+            print(f"series={series}")
             for s in data_to_steps[data]:
                 for num_epochs in epochs:
                     lookback, horizon = s
@@ -323,11 +310,8 @@ def main():
                         horizon=horizon,
                         num_epochs=num_epochs,
                         blocks=blocks,
-                        out_txt_name=out_txt_name,
-                        print_stats=False,
                         series=series,
-                        layers_type=layers_type,
-                        num_channels=num_channels,
+                        print_stats=False
                     )
     else:
         for s in data_to_steps[data]:
@@ -340,12 +324,10 @@ def main():
                     horizon=horizon,
                     num_epochs=num_epochs,
                     blocks=blocks,
-                    out_txt_name=out_txt_name,
-                    print_stats=False,
-                    series=None,
-                    layers_type=layers_type,
-                    num_channels=num_channels,
+                    print_stats=False
                 )
+        
+
 
 
 if __name__ == "__main__":

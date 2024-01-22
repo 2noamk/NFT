@@ -50,7 +50,7 @@ class NFT(nn.Module):
         self.layers_type = layers_type
         self.num_channels_for_tcn = num_channels_for_tcn
         self.parameters = []
-        print('| N-Beats')
+        print('| NFT')
         for stack_id in range(len(self.stack_types)):
             self.stacks.append(self.create_stack(stack_id))
         self.parameters = nn.ParameterList(self.parameters)

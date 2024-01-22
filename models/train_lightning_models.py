@@ -79,7 +79,8 @@ class Model(pl.LightningModule):
                 nb_blocks_per_stack=2,
                 thetas_dim=(4,8),
                 forecast_length=horizon,
-                backcast_length=lookback)
+                backcast_length=lookback,
+                )
         self.data = data 
         self.lookback=lookback 
         self.horizon=horizon 
@@ -326,13 +327,13 @@ def train_lightning_model(
 
 
 def main():
-    model_type = 'transformer'
-    data = 'eeg'
+    model_type = 'nft'
+    data = 'eeg_single'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
-    epochs = [10]
-    blocks_lst = [2]
-    layers_type = 'tcn'
+    epochs = [20]
+    blocks_lst = [3]
+    layers_type = 'fc'
     print(f"data = {data}")
     
     if model_type == 'nft':
