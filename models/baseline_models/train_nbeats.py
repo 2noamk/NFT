@@ -115,11 +115,12 @@ def train(
         print(f"train_X={train_X.shape}")
 
         nbeats_model = NBeatsNet(
-        stack_types=(NBeatsNet.TREND_BLOCK, NBeatsNet.SEASONALITY_BLOCK),
+        # stack_types=(NBeatsNet.TREND_BLOCK, NBeatsNet.SEASONALITY_BLOCK),
+        stack_types=(NBeatsNet.GENERIC_BLOCK, NBeatsNet.TREND_BLOCK, NBeatsNet.SEASONALITY_BLOCK),
         forecast_length=horizon,
         backcast_length=lookback,
         nb_blocks_per_stack=blocks,
-        thetas_dim=(4,8),
+        thetas_dim=(8,4,8),
         ).to(device)
         train_X_idx, train_y_idx = train_X[:,:,idx], train_y[:,:,idx]
         val_X_idx, val_y_idx = val_X[:,:,idx], val_y[:,:,idx]
@@ -139,7 +140,8 @@ def train(
                 print_epoch=epochs, 
                 path_to_save_prediction_plots=None)
         
-        _, _, _, _, test_mse, _, test_smape, _, _, _, test_mase = evaluate_model(nbeats_model, train_X_idx, train_y_idx, val_X_idx, val_y_idx, test_X_idx, test_y_idx)
+        print(f"train_y_idx, val_y_idx, test_y_idx={train_y_idx.shape, val_y_idx.shape, test_y_idx.shape}")
+        train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase = evaluate_model(nbeats_model, train_X_idx, train_y_idx, val_X_idx, val_y_idx, test_X_idx, test_y_idx)
 
 
         mse_lst.append(test_mse.item() if isinstance(test_mse, torch.Tensor) else test_mse)
@@ -172,9 +174,9 @@ def train(
     
   
 def main():
-    data = 'ecg'
-    epochs = [7]
-    blocks = 2
+    data = 'air_quality'
+    epochs = [10]
+    blocks = 4
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:

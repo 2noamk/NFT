@@ -328,12 +328,12 @@ def train_lightning_model(
 
 def main():
     model_type = 'nft'
-    data = 'eeg_single'
+    data = 'ecg'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
-    epochs = [20]
-    blocks_lst = [3]
-    layers_type = 'fc'
+    epochs = [7]
+    blocks_lst = [2]
+    layers_type = 'tcn'
     print(f"data = {data}")
     
     if model_type == 'nft':
