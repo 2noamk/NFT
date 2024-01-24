@@ -327,8 +327,10 @@ def train_lightning_model(
 
 
 def main():
+    """Choose model: nft / tcn / transformer / lstm"""
     model_type = 'nft'
-    data = 'ecg'
+    """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
+    data = 'air_quality'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
     epochs = [7]
