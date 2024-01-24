@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from lists import Stations, Ecg, EEG
 
 data_to_num_cols = {
@@ -39,10 +39,10 @@ data_to_num_of_series = {
 
 
 data_to_raw_data_path = {
-    'ecg': '/home/noam.koren/multiTS/NFT/data/ecg/600_pkl_files', 
-    'eeg': '/home/noam.koren/multiTS/NFT/data/eeg/eval_normal_pkl',
-    'chorales': '/home/noam.koren/multiTS/NFT/data/chorales/chorales_pkl', 
-    'cabs': '/home/noam.koren/multiTS/NFT/data/cabs/cabs_150_pkl'
+    'ecg': 'NFT/data/ecg/600_pkl_files', 
+    'eeg': 'NFT/data/eeg/eval_normal_pkl',
+    'chorales': 'NFT/data/chorales/chorales_pkl', 
+    'cabs': 'NFT/data/cabs/cabs_150_pkl'
     }
 
 

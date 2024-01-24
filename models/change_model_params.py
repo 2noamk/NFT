@@ -3,16 +3,16 @@ import sys
 import os
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT/')
+sys.path.append('NFT/models/NFT/')
 from NFT import NFT
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/baseline_models/')
+sys.path.append('NFT/models/baseline_models/')
 from base_models import TCN, TimeSeriesTransformer, LSTM
 
-base_path = "/home/noam.koren/multiTS/NFT/models/trained_models/"
+base_path = "NFT/models/trained_models/"
 
 def get_model_object(model_type, lookback, horizon, num_vars):
     if model_type == 'nft':
@@ -72,16 +72,16 @@ import sys
 import os
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT/')
+sys.path.append('NFT/models/NFT/')
 from NFT import NFT
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/baseline_models/')
+sys.path.append('NFT/models/baseline_models/')
 from base_models import TCN, TimeSeriesTransformer, LSTM
 
-base_path = "/home/noam.koren/multiTS/NFT/models/trained_models/"
+base_path = "NFT/models/trained_models/"
 
 def get_model_object(model_type, lookback, horizon, num_vars):
     if model_type == 'nft':

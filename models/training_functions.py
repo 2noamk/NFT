@@ -62,7 +62,7 @@ def read_all_data_and_print_stats(data_path, print_stats=True):
 
 
 def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):    
-    data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
+    data_path=f"NFT/data/{data}/"
 
     if data in ['ecg', 'eeg']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_{n_series}series/"
@@ -409,7 +409,7 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
 
 def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, series, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
         
-    base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
+    base_dir = f"NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
@@ -455,7 +455,7 @@ def get_model_name(model_type, data, lookback, horizon, epochs, blocks, layers_t
 
 
 def get_path(model_name, data, model_type):
-    trained_models_path=f"/home/noam.koren/multiTS/NFT/models/trained_models/"
+    trained_models_path=f"NFT/models/trained_models/"
     path_to_save_model = trained_models_path + f"{data}/{model_type}/{model_name}/"    
     path_to_save_checkpoint_models = path_to_save_model + "models_during_train/"
     path_to_save_loss_plots = path_to_save_model + "loss_plots/"
@@ -485,7 +485,7 @@ def print_conclusion_to_txt(
     test_metrics
 ):
     
-    txt_path = f"/home/noam.koren/multiTS/NFT/models/NFT/{out_txt_name}.txt"
+    txt_path = f"NFT/models/NFT/{out_txt_name}.txt"
 
     log_config = f"model = {model_type}, data = {data}, epochs = {num_epochs},blocks = {blocks}, lookback = {lookback}, horizon = {horizon}"
     log_to_file(log_config, txt_path)

@@ -12,7 +12,7 @@ from torch.optim import Optimizer
 from torch.nn import functional as F
 from torch.nn.functional import mse_loss, l1_loss, binary_cross_entropy, cross_entropy
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from models.training_functions import plot_predictions, plot_loss_over_epoch_graph
 from models.baseline_models.base_models import TCN, LSTM
 

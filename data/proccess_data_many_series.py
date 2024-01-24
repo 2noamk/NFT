@@ -1,15 +1,14 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_raw_data_path, data_to_steps, data_to_num_cols
 
-sys.path.append('/home/noam.koren/multiTS/NFT/data/')
-from proccess_data_functions import get_processed_data_many_series, standardize_data, save_to_pkl
+from data.proccess_data_functions import get_processed_data_many_series, standardize_data, save_to_pkl
 
 
 def process_data(data, lookback, horizon):
     
-    path = f"/home/noam.koren/multiTS/NFT/data/{data}/"
+    path = f"NFT/data/{data}/"
 
     n_series = data_to_num_of_series[data]
     

@@ -1,14 +1,13 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list
 
-sys.path.append('/home/noam.koren/multiTS/NFT/data/')
-from proccess_data_functions import get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
+from data.proccess_data_functions import get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
 def process_data(data, lookback, horizon, series=None):
-    path = f"/home/noam.koren/multiTS/NFT/data/"
+    path = f"NFT/data/"
     
     if data == 'noaa':
         df = get_df_without_outliers(

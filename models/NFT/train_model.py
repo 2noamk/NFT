@@ -2,17 +2,17 @@ import torch
 import sys
 import pytorch_lightning as pl
 
-# sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT/')
+# sys.path.append('NFT/models/NFT/')
 # from NFT_NFT import NFT
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT/')
+sys.path.append('NFT/models/NFT/')
 from models.NFT.NFT import NFT
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('NFT/')
 from models.training_functions import get_data, evaluate_model, save_model, get_model_name, add_results_to_excel, get_path
 
 
