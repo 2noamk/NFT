@@ -28,25 +28,23 @@ def main(
         blocks=2,
         layers_type='tcn',
         batch_size=32,
-        n_rows=700,
-        station="AG000060590",
+        series=None,
 ):
     
     num_of_vars=data_to_num_vars_dict[data]    
     n_series=data_to_num_of_series[data]
     
-    model_name = get_model_name(data, lookback, horizon, blocks, layers_type, n_series, n_rows, station)
+    model_name = get_model_name('nft', data, lookback, horizon, num_epochs, blocks, layers_type, n_series, series)
     
-    path_to_save_model, path_to_save_checkpoint_models, path_to_save_loss_plots, path_to_save_prediction_plots = get_path(model_name)
+    path_to_save_model, path_to_save_checkpoint_models, path_to_save_loss_plots, path_to_save_prediction_plots = get_path(model_name, data, 'nft')
     
     train_X, train_y, val_X, val_y, test_X, test_y = get_data(
         data=data, 
         lookback=lookback, 
         horizon=horizon,
-        n_series=n_series, 
-        n_rows=n_rows,
-        station=station,
-        print_stats=False
+        n_series=n_series,
+        print_stats=False,
+        series=series
         )
 
     model = NFT(
@@ -72,13 +70,12 @@ def main(
         path_to_save_prediction_plots=path_to_save_prediction_plots
         )
 
-    train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase = evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y)
+    train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase = evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y)
 
-    add_results_to_excel("nft", train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase)
-    
+    add_results_to_excel("nft", data, lookback, horizon, num_epochs, blocks, series, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase)
     save_model(model, path_to_save_model, model_name)
     
-    print(f"Lookback={lookback} Horizon={horizon}")
+    print(f"path_to_save_model={path_to_save_model}, model_name={model_name}")
 
 
 if __name__ == "__main__":
@@ -89,11 +86,10 @@ if __name__ == "__main__":
         data=data,
         lookback=lookback,
         horizon=horizon,
-        num_epochs=2,
+        num_epochs=1,
         plot_epoch=100,
         blocks=2,
         layers_type='tcn',
         batch_size=32,
-        n_rows=700,
-        station="AG000060590", # "AEM00041194" #"AG000060590"
+        series=None, # "AEM00041194" #"AG000060590"
     )
