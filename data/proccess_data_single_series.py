@@ -40,7 +40,7 @@ def process_data(data, lookback, horizon, series=None):
         
         
     if series is None: 
-        pkl_path = f'{path}{data}_{lookback}l_{horizon}h/'
+        pkl_path = f'{path}{data}/{data}_{lookback}l_{horizon}h/'
     else:
         pkl_path = f'{path}{data}/{series}/{series}_{lookback}l_{horizon}h/'
     
@@ -63,7 +63,7 @@ def process_data(data, lookback, horizon, series=None):
 
 
 def main():
-    data = 'noaa'
+    data = 'air_quality'
     if data in ['noaa', 'eeg_single', 'ecg_single']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:

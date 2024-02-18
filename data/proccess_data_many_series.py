@@ -8,7 +8,7 @@ from data.proccess_data_functions import get_processed_data_many_series, standar
 
 def process_data(data, lookback, horizon):
     
-    path = f"NFT/data/{data}/"
+    path = f"/home/noam.koren/multiTS/NFT/data/{data}/"
 
     n_series = data_to_num_of_series[data]
     

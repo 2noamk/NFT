@@ -328,12 +328,12 @@ def train_lightning_model(
 
 def main():
     """Choose model: nft / tcn / transformer / lstm"""
-    model_type = 'nft'
+    model_type = 'tcn'
     """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'air_quality'
+    data = 'cabs'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
-    epochs = [7]
+    epochs = [10]
     blocks_lst = [2]
     layers_type = 'tcn'
     print(f"data = {data}")

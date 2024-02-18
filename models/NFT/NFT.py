@@ -34,7 +34,8 @@ class NFT(nn.Module):
             share_weights_in_stack=False,
             hidden_layer_units=256,
             nb_harmonics=None,
-            n_vars=1
+            n_vars=1,
+            is_poly = False
     ):
         super(NFT, self).__init__()
         self.forecast_length = forecast_length
@@ -49,6 +50,7 @@ class NFT(nn.Module):
         self.thetas_dim = thetas_dim
         self.layers_type = layers_type
         self.num_channels_for_tcn = num_channels_for_tcn
+        self.is_poly = is_poly
         self.parameters = []
         print('| NFT')
         for stack_id in range(len(self.stack_types)):
@@ -77,7 +79,8 @@ class NFT(nn.Module):
                     backcast_length=self.backcast_length, 
                     forecast_length=self.forecast_length,
                     num_channels_for_tcn=self.num_channels_for_tcn,
-                    nb_harmonics=self.nb_harmonics
+                    nb_harmonics=self.nb_harmonics,
+                    is_poly=self.is_poly,
                 )
                 self.parameters.extend(block.parameters())
             print(f'     | -- {block}')
@@ -233,6 +236,7 @@ class NFT(nn.Module):
                     save_path = path_to_save_model + f"model_checkpoint_epoch_{epoch}.pth"
                     torch.save(self.state_dict(), save_path)
                     print(f"Saved model checkpoint at epoch {epoch} to {save_path}", flush=True)
+        
         
         print(f"The min train loss is {min_train_loss} at epoch {min_train_loss_epoch}\n"
               f"The min val loss is {min_val_loss} at epoch {min_val_loss_epoch}\n")    
@@ -395,19 +399,41 @@ def seasonality_model(thetas, len_series_linespace, n_vars_linespace):
     return result
 
 
-def trend_model(thetas, t):
+# def trend_model(thetas, t):
+#     """
+#     thetas: is of size (batch_size, n_vars, thetas_dim)
+#     t: linspace of length: series_len
+#     """
+#     batch_size, n_vars, p = thetas.shape
+#     assert p <= 4, 'thetas_dim is too big.'
+#     T = torch.tensor(np.array([t ** i for i in range(p)])).float().to(thetas.device) # shape: (p, series_len)    
+#     expanded_T = T.unsqueeze(0).expand(batch_size, -1, -1)
+
+#     trends = torch.cat([torch.bmm(thetas[:, i:i+1, :], expanded_T) for i in range(n_vars)], dim=1)
+#     trends = trends.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
+
+#     return trends
+
+def trend_model(thetas, t, n=None, is_poly=False):
     """
     thetas: is of size (batch_size, n_vars, thetas_dim)
     t: linspace of length: series_len
+    n: linspace of length: num of vars
     """
+    def create_trend_mat(h, d):
+        return torch.tensor(np.array([h ** i for i in range(d)])).float().to(thetas.device)
+
     batch_size, n_vars, p = thetas.shape
     assert p <= 4, 'thetas_dim is too big.'
-    T = torch.tensor(np.array([t ** i for i in range(p)])).float().to(thetas.device) # shape: (p, series_len)    
-    expanded_T = T.unsqueeze(0).expand(batch_size, -1, -1)
+    
+    T2 = create_trend_mat(t, p).unsqueeze(0).expand(batch_size, -1, -1)
+    
+    if is_poly:
+        T1 = create_trend_mat(n, n_vars).unsqueeze(0).expand(batch_size, -1, -1) # instaed of p, n_vars
+        thetas = torch.bmm(T1, thetas) # shape: (batch_size, n_vars, thetas_dim)
 
-    trends = torch.cat([torch.bmm(thetas[:, i:i+1, :], expanded_T) for i in range(n_vars)], dim=1)
+    trends = torch.bmm(thetas, T2) # shape: (batch_size, n_vars, series_len)
     trends = trends.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
-
     return trends
 
 
@@ -497,7 +523,7 @@ class Block(nn.Module):
 
 class SeasonalityBlock(Block):
 
-    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], nb_harmonics=None):
+    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], is_poly=False, nb_harmonics=None):
         if nb_harmonics:
             super(SeasonalityBlock, self).__init__(units, nb_harmonics, layers_type, n_vars, backcast_length,
                                                    forecast_length, num_channels_for_tcn, share_thetas=True)
@@ -532,10 +558,13 @@ class SeasonalityBlock(Block):
 
 class TrendBlock(Block):
 
-    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], nb_harmonics=None):
+    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], 
+                 nb_harmonics=None, is_poly=False):
         super(TrendBlock, self).__init__(units, thetas_dim, layers_type, n_vars, backcast_length,
                                          forecast_length, num_channels_for_tcn, share_thetas=True)
-
+        self.is_poly = is_poly
+        self.vars_linspace = linear_space(n_vars) if is_poly else None
+            
     def forward(self, x, return_thetas=False):
         """
         x: is of size (batch_size, series_len, n_vars)
@@ -548,17 +577,18 @@ class TrendBlock(Block):
         batch_size = x.shape[0]
         backcast_thetas = self.theta_b_fc(x).reshape(batch_size, self.n_vars, self.thetas_dim) 
         forecast_thetas = self.theta_f_fc(x).reshape(batch_size, self.n_vars, self.thetas_dim)
-
-        backcast = trend_model(backcast_thetas, self.backcast_linspace)
-        forecast = trend_model(forecast_thetas, self.forecast_linspace)
         
+        backcast = trend_model(backcast_thetas, self.backcast_linspace, self.vars_linspace, self.is_poly)
+        forecast = trend_model(forecast_thetas, self.forecast_linspace, self.vars_linspace, self.is_poly)
+
         if return_thetas: return backcast, forecast, forecast_thetas
         return backcast, forecast
 
 
 class GenericBlock(Block):
 
-    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], nb_harmonics=None):
+    def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], 
+                 nb_harmonics=None, is_poly=False):
         super(GenericBlock, self).__init__(units, thetas_dim, 'fc', n_vars, backcast_length, forecast_length, num_channels_for_tcn)
 
         self.backcast_fc = nn.Linear(thetas_dim * n_vars, backcast_length * n_vars)

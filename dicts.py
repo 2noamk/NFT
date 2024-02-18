@@ -40,9 +40,9 @@ data_to_num_of_series = {
 
 data_to_raw_data_path = {
     'ecg': 'NFT/data/ecg/600_pkl_files', 
-    'eeg': 'NFT/data/eeg/eval_normal_pkl',
+    'eeg': '/home/noam.koren/multiTS/NFT/data/eeg/eval_normal_pkl',
     'chorales': 'NFT/data/chorales/chorales_pkl', 
-    'cabs': 'NFT/data/cabs/cabs_150_pkl'
+    'cabs': '/home/noam.koren/multiTS/NFT/data/cabs/cabs_150_pkl'
     }
 
 
