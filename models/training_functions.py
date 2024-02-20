@@ -455,7 +455,7 @@ def get_model_name(model_type, data, lookback, horizon, epochs, blocks, layers_t
 
 
 def get_path(model_name, data, model_type):
-    trained_models_path=f"NFT/models/trained_models/"
+    trained_models_path=f"/home/noam.koren/multiTS/NFT/models/trained_models/"
     path_to_save_model = trained_models_path + f"{data}/{model_type}/{model_name}/"    
     path_to_save_checkpoint_models = path_to_save_model + "models_during_train/"
     path_to_save_loss_plots = path_to_save_model + "loss_plots/"

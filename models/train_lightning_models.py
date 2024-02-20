@@ -45,7 +45,8 @@ class Model(pl.LightningModule):
                 num_channels_for_tcn=num_channels,
                 share_weights_in_stack=False,
                 hidden_layer_units=256,
-                nb_harmonics=None
+                nb_harmonics=None,
+                is_poly=False, #!!!!!!!!!!!!!!!!!!!!!!
             )
         elif model == 'tcn':
             self.model = TCN(
@@ -328,9 +329,9 @@ def train_lightning_model(
 
 def main():
     """Choose model: nft / tcn / transformer / lstm"""
-    model_type = 'tcn'
+    model_type = 'nft'
     """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'cabs'
+    data = 'ecg'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
     epochs = [10]
