@@ -4,7 +4,7 @@ import sys
 from torch.utils.data import Dataset
 import numpy as np
 
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
 from models.training_functions import get_data, train_model, evaluate_model, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel
 from models.baseline_models.base_models import NBeatsNet, FC, LSTM, CNN, TCN, TimeSeriesTransformer

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from nbeats_pytorch.model import NBeatsNet
 from torch.utils.data import DataLoader, TensorDataset
 
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
 from models.training_functions import get_data, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel, get_model_name, get_path, save_model
 from models.NFT.NFT import NFT
@@ -30,7 +30,8 @@ class Model(pl.LightningModule):
         data='noaa', 
         print_stats=False,
         n_series=36, 
-        series="AG000060590"
+        series="AG000060590",
+        is_poly=True,
         ):
         super(Model, self).__init__()
         if model == 'nft':
@@ -46,7 +47,7 @@ class Model(pl.LightningModule):
                 share_weights_in_stack=False,
                 hidden_layer_units=256,
                 nb_harmonics=None,
-                is_poly=False, #!!!!!!!!!!!!!!!!!!!!!!
+                is_poly=is_poly,
             )
         elif model == 'tcn':
             self.model = TCN(
@@ -247,7 +248,8 @@ def train_lightning_model(
     series,
     thetas_dim=(4,8),
     layers_type='tcn',
-    num_channels=None
+    num_channels=None,
+    is_poly=True,
 ): 
     print(f"training model {model_type} on data {data} for lookback {lookback} and horizon {horizon}")
     
@@ -268,7 +270,8 @@ def train_lightning_model(
         data=data, 
         print_stats=print_stats,
         n_series=n_series, 
-        series=series
+        series=series,
+        is_poly=is_poly
         )
 
     trainer = pl.Trainer(
@@ -294,6 +297,7 @@ def train_lightning_model(
         epochs=num_epochs, 
         blocks=blocks, 
         series=series, 
+        is_poly=is_poly,
         train_mse=model.train_loss[-1], 
         test_mse=model.test_loss[-1], 
         train_smape=train_metrics['smape'], 
@@ -331,21 +335,24 @@ def main():
     """Choose model: nft / tcn / transformer / lstm"""
     model_type = 'nft'
     """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'ecg'
+    data = 'noaa_1955'
     out_txt_name = f"{model_type}_{data}.txt"
     num_channels = [2, 2]
     epochs = [10]
     blocks_lst = [2]
     layers_type = 'tcn'
+    is_poly = True
+    thetas_dim = (4,8)
     print(f"data = {data}")
     
-    if model_type == 'nft':
-        if data in ['eeg_single', 'ecg_single', 'noaa']:
-            for series in single_data_to_series_list[data]:
-                for s in data_to_steps[data]:
-                    for num_epochs in epochs:
-                        for blocks in blocks_lst:
-                            lookback, horizon = s
+
+    for s in data_to_steps[data]:
+        lookback, horizon = s
+        for num_epochs in epochs:
+            if model_type == 'nft':
+                for blocks in blocks_lst:
+                    if data in ['eeg_single', 'ecg_single', 'noaa']:
+                        for series in single_data_to_series_list[data]:
                             train_lightning_model(
                                 model_type=model_type,
                                 data=data,
@@ -356,14 +363,12 @@ def main():
                                 out_txt_name=out_txt_name,
                                 print_stats=False,
                                 series=series,
+                                thetas_dim=thetas_dim,
                                 layers_type=layers_type,
-                                num_channels=num_channels
+                                num_channels=num_channels,
+                                is_poly=is_poly
                         )
-        else:
-            for s in data_to_steps[data]:
-                for num_epochs in epochs:
-                    for blocks in blocks_lst:
-                        lookback, horizon = s
+                    else:
                         train_lightning_model(
                             model_type=model_type,
                             data=data,
@@ -371,20 +376,34 @@ def main():
                             horizon=horizon,
                             num_epochs=num_epochs,
                             blocks=blocks if model_type=='nft' else 0,
-                            thetas_dim=(4,8),
                             out_txt_name=out_txt_name,
                             print_stats=False,
                             series=None,
+                            thetas_dim=thetas_dim,
                             layers_type=layers_type,
-                            num_channels=num_channels
+                            num_channels=num_channels,
+                            is_poly=True
                     )
-    
-    else:       
-        if data in ['eeg_single', 'ecg_single', 'noaa']:
-            for series in single_data_to_series_list[data]:
-                for s in data_to_steps[data]:
-                    for num_epochs in epochs:
-                        lookback, horizon = s
+                                           
+                        train_lightning_model(
+                            model_type=model_type,
+                            data=data,
+                            lookback=lookback,
+                            horizon=horizon,
+                            num_epochs=num_epochs,
+                            blocks=blocks if model_type=='nft' else 0,
+                            out_txt_name=out_txt_name,
+                            print_stats=False,
+                            series=None,
+                            thetas_dim=thetas_dim,
+                            layers_type=layers_type,
+                            num_channels=num_channels,
+                            is_poly=False
+                    )
+        
+            else: 
+                if data in ['eeg_single', 'ecg_single', 'noaa']:
+                    for series in single_data_to_series_list[data]:
                         train_lightning_model(
                             model_type=model_type,
                             data=data,
@@ -398,10 +417,7 @@ def main():
                             layers_type=layers_type,
                             num_channels=num_channels,
                         )
-        else:
-            for s in data_to_steps[data]:
-                for num_epochs in epochs:
-                    lookback, horizon = s
+                else:
                     train_lightning_model(
                         model_type=model_type,
                         data=data,

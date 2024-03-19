@@ -3,15 +3,14 @@ import torch
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from torch.nn import functional as F
-from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset
+from torch.nn import functional as F
 
 models_path = "/home/noam.koren/multiTS/NFT"
 if models_path not in sys.path: sys.path.append(models_path)
 
-from models.training_functions import train_model, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel
+from models.training_functions import train_model, calculate_smape, calculate_mape, calculate_mase
 from models.baseline_models.base_models import NBeatsNet
 
 
@@ -177,6 +176,7 @@ def train(
     thetas_dim, 
     nb_blocks_per_stack, 
     epoch, 
+    file_path,
     n_vars=8,
 ):
     train_X, train_y, val_X, val_y, test_X, test_y = get_data(
@@ -231,8 +231,7 @@ def train(
     smape_vals = [np.mean(smape_lst[:i]) for i in range(1, 9)]
     mase_vals = [np.mean(mase_lst[:i]) for i in range(1, 9)]
     
-    for i in range(n_vars):    
-        file_path = '/home/noam.koren/multiTS/NFT/results/evaluate_nbeats_trend_on_syntatic_data.xlsx'
+    for i in range(n_vars):
 
         if Path(file_path).is_file(): df = pd.read_excel(file_path)
         else: df = pd.DataFrame(columns=["Lookback", "Horizon", "Vars", "Epochs", "Stacks", 
@@ -247,6 +246,7 @@ def train(
     
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
+        df.to_excel(file_path, index=False)
 
 if __name__ == '__main__':
     plot = False
@@ -256,11 +256,14 @@ if __name__ == '__main__':
 
     stacks = [ 
               (('trend', 'seasonality'), [(1,8), (2,8), (3,8), (4,8)]), 
-              (('seasonality', 'seasonality'), [(8,8), (8,8), (8,8), (8,8)]),
               (('trend', 'trend'), [(1, 1), (2,2), (3,3), (4,4)]),
+              (('seasonality', 'seasonality'), [(8,8), (8,8), (8,8), (8,8)]),
             ]
     blocks = [1,2,3]
     epochs = [15]
+    
+        
+    excel_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/evaluate_nbeats_trend_on_syntatic_data.xlsx'
 
     for s in steps:
         lookback, horizon = s
@@ -270,7 +273,7 @@ if __name__ == '__main__':
                 for nb_blocks_per_stack in blocks:
                     for epoch in epochs:
                         if stack_types == ('seasonality', 'seasonality'):
-                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch)
+                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch, excel_path)
                         else:
-                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch)
-                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch)
+                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch, excel_path)
+                            train(lookback, horizon, stack_types, thetas_dim, nb_blocks_per_stack, epoch, excel_path)

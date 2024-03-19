@@ -407,9 +407,9 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     return train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
 
 
-def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, series, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
+def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, is_poly, series, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
         
-    base_dir = f"NFT/results/{data}/{model}"
+    base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
@@ -420,7 +420,7 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, series,
     file_path = f"{base_dir}/{model}_{data}_results.xlsx"
         
     if Path(file_path).is_file(): df = pd.read_excel(file_path)
-    else: df = pd.DataFrame(columns=["Data", "Lookback", "Horizon", "Epochs", "Blocks",
+    else: df = pd.DataFrame(columns=["Data", "Lookback", "Horizon", "Epochs", "Blocks", "Is Poly",
                                    "train_mse", "test_mse", "train_smape", "test_smape", 
                                    "train_mape", "test_mape", "train_mase", "test_mase"])
     
@@ -428,7 +428,7 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, series,
     if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
         
     new_row = {"Data": data, "Lookback": lookback, "Horizon": horizon, 
-               "Epochs": epochs, "Blocks": blocks,
+               "Epochs": epochs, "Blocks": blocks, "Is Poly": is_poly,
                "train_mse": train_mse, "test_mse": test_mse, 
                "train_smape": train_smape, "test_smape": test_smape, 
                "train_mape": train_mape, "test_mape": test_mape, 

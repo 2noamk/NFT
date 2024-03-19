@@ -11,8 +11,7 @@ from torch import nn, optim
 from torch.optim import Optimizer
 from torch.nn import functional as F
 from torch.nn.functional import mse_loss, l1_loss, binary_cross_entropy, cross_entropy
-
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from models.training_functions import plot_predictions, plot_loss_over_epoch_graph
 from models.baseline_models.base_models import TCN, LSTM
 
@@ -35,7 +34,7 @@ class NFT(nn.Module):
             hidden_layer_units=256,
             nb_harmonics=None,
             n_vars=1,
-            is_poly = False
+            is_poly=False
     ):
         super(NFT, self).__init__()
         self.forecast_length = forecast_length
@@ -240,19 +239,6 @@ class NFT(nn.Module):
         
         print(f"The min train loss is {min_train_loss} at epoch {min_train_loss_epoch}\n"
               f"The min val loss is {min_val_loss} at epoch {min_val_loss_epoch}\n")    
-
-    # def predict(self, x, return_interpretable=False):
-    #     x = x.reshape(-1, self.backcast_length, self.n_vars)
-    #     self.eval()
-    #     f = self(x.clone().detach())
-    #     f = f.detach().cpu()    
-    #     if return_interpretable:
-    #         with torch.no_grad():
-    #             trend_forecast = self(x, output_type='trend')
-    #             seasonality_forecast = self(x, output_type='seasonality')
-    #         return f, trend_forecast, seasonality_forecast
-    #     else:
-    #         return f
         
     def predict(self, x, return_interpretable=False, return_thetas=False):
         x = x.reshape(-1, self.backcast_length, self.n_vars)
@@ -285,45 +271,6 @@ class NFT(nn.Module):
         i_pred = sum([a['value'][0] for a in self._intermediary_outputs if 'generic' not in a['layer'].lower()])
         outputs = {o['layer']: o['value'][0] for o in self._intermediary_outputs}
         return g_pred, i_pred, outputs
-
-    # def forward(self, backcast, output_type = 'all'):
-    #     if backcast.dim() == 2: 
-    #         self._single_series = True
-    #         backcast = backcast.unsqueeze(-1)
-    #     self._intermediary_outputs = []
-    #     batch_size = backcast.shape[0]
-    #     forecast = torch.zeros(size=(batch_size, self.forecast_length, self.n_vars))
-    #     for stack_id in range(len(self.stacks)):
-    #         for block_id in range(len(self.stacks[stack_id])):
-    #             block = self.stacks[stack_id][block_id]
-    #             block_type = block.__class__.__name__
-    #             if (output_type == 'all' or
-    #                 (output_type == 'trend' and block_type == 'TrendBlock') or
-    #                 (output_type == 'seasonality' and block_type == 'SeasonalityBlock')):
-                    
-    #                 b, f = block(backcast)
-    #                 backcast = backcast - b
-    #                 if f.is_cuda:
-    #                     forecast = forecast.to(f.device)
-    #                 forecast = forecast + f
-
-    #                 layer_name = f'stack_{stack_id}-{block_type}_{block_id}'
-    #                 if self._gen_intermediate_outputs:
-    #                     self._intermediary_outputs.append({'value': f.detach().cpu().numpy(), 'layer': layer_name})
-    
-    #         # for block_id in range(len(self.stacks[stack_id])):
-    #         #     b, f = self.stacks[stack_id][block_id](backcast)
-    #         #     backcast = backcast - b
-    #         #     if f.is_cuda: forecast = forecast.to(f.device)
-    #         #     forecast = forecast + f
-    #         #     block_type = self.stacks[stack_id][block_id].__class__.__name__
-    #         #     layer_name = f'stack_{stack_id}-{block_type}_{block_id}'
-    #         #     if self._gen_intermediate_outputs:
-    #         #         self._intermediary_outputs.append({'value': f.detach().cpu().numpy(), 'layer': layer_name})
-        
-    #     if self._single_series:
-    #         backcast, forecast = backcast.squeeze(), forecast.squeeze()
-    #     return forecast
 
     def forward(self, backcast, output_type='all', return_thetas=False):
         if backcast.dim() == 2:
@@ -399,21 +346,6 @@ def seasonality_model(thetas, len_series_linespace, n_vars_linespace):
     return result
 
 
-# def trend_model(thetas, t):
-#     """
-#     thetas: is of size (batch_size, n_vars, thetas_dim)
-#     t: linspace of length: series_len
-#     """
-#     batch_size, n_vars, p = thetas.shape
-#     assert p <= 4, 'thetas_dim is too big.'
-#     T = torch.tensor(np.array([t ** i for i in range(p)])).float().to(thetas.device) # shape: (p, series_len)    
-#     expanded_T = T.unsqueeze(0).expand(batch_size, -1, -1)
-
-#     trends = torch.cat([torch.bmm(thetas[:, i:i+1, :], expanded_T) for i in range(n_vars)], dim=1)
-#     trends = trends.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
-
-#     return trends
-
 def trend_model(thetas, t, n=None, is_poly=False):
     """
     thetas: is of size (batch_size, n_vars, thetas_dim)
@@ -424,7 +356,7 @@ def trend_model(thetas, t, n=None, is_poly=False):
         return torch.tensor(np.array([h ** i for i in range(d)])).float().to(thetas.device)
 
     batch_size, n_vars, p = thetas.shape
-    assert p <= 4, 'thetas_dim is too big.'
+    # assert p <= 4, 'thetas_dim is too big.'
     
     T2 = create_trend_mat(t, p).unsqueeze(0).expand(batch_size, -1, -1)
     
@@ -486,6 +418,7 @@ class Block(nn.Module):
 
             if self.layers_type == 'fc':
                 self.theta_f_fc = self.theta_b_fc = nn.Linear(units, thetas_dim * n_vars, bias=False)
+                
         else:
             if self.layers_type in ['tcn', 'lstm']:
                 self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
@@ -589,7 +522,8 @@ class GenericBlock(Block):
 
     def __init__(self, units, thetas_dim, layers_type, n_vars, backcast_length=10, forecast_length=5, num_channels_for_tcn=[25, 50], 
                  nb_harmonics=None, is_poly=False):
-        super(GenericBlock, self).__init__(units, thetas_dim, 'fc', n_vars, backcast_length, forecast_length, num_channels_for_tcn)
+        super(GenericBlock, self).__init__(units, thetas_dim, 'fc', n_vars, backcast_length, 
+                                           forecast_length, num_channels_for_tcn, share_thetas=True)
 
         self.backcast_fc = nn.Linear(thetas_dim * n_vars, backcast_length * n_vars)
         self.forecast_fc = nn.Linear(thetas_dim * n_vars, forecast_length * n_vars)
@@ -611,3 +545,11 @@ class GenericBlock(Block):
         forecast = self.forecast_fc(theta_f).reshape(batch_size, self.forecast_length, self.n_vars) 
 
         return backcast, forecast
+    
+    
+    
+    
+    
+    
+    
+    import os

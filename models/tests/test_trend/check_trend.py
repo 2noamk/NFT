@@ -15,7 +15,8 @@ from models.NFT.NFT import NFT
 from models.training_functions import evaluate_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-def get_data(lookback, horizon, n_vars, plot=True):
+
+def get_data(lookback, horizon, n_vars, plot=True, sinusodial=False):
     def create_datasets(data, lookback, horizon):
         X, y = [], []
         for i in range(len(data) - lookback - horizon + 1):
@@ -58,6 +59,16 @@ def get_data(lookback, horizon, n_vars, plot=True):
     polynomial7 = -4 * time**3 - 0.1 * time**2 - 7 * time + 25
 
     polynomial8 = 0.4 * time**3 - 6 * time**2 - 0.1 * time - 6
+    
+    if sinusodial:
+        polynomial1 = polynomial1 + 100000000 * np.sin(3 * time)
+        polynomial2 = polynomial2 + 50000000 * np.sin(1 * time)
+        polynomial3 = polynomial3 + 300000000 * np.sin(3 * time)
+        polynomial4 = polynomial4 + 100000000 * np.sin(3 * time)
+        polynomial5 = polynomial5 + 10000000 * np.sin(4 * time)
+        polynomial6 = polynomial6 + 900000000 * np.sin(0.02 * time)
+        polynomial7 = polynomial7 + 50000000 * np.sin(1 * time)
+        polynomial8 = polynomial8 + 50000000 * np.sin(0.7 * time)
 
     p = (polynomial1, polynomial2, polynomial3, polynomial4, polynomial5, polynomial6, polynomial7, polynomial8)
 
@@ -120,7 +131,7 @@ def train_model_and_save_evals(lookback, horizon, n_vars, stack_types, thetas_di
 
     _, _, _, _, test_mse, _, test_smape, _, _, _, test_mase = evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y)
     
-    file_path = '/home/noam.koren/multiTS/NFT/results/evaluate_trend_on_syntatic_data.xlsx'
+    file_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/evaluate_sinusodial_trend_on_syntatic_data.xlsx'
 
     if Path(file_path).is_file(): df = pd.read_excel(file_path)
     else: df = pd.DataFrame(columns=["Lookback", "Horizon", "Vars", "Epochs", "Stacks", 
@@ -140,21 +151,26 @@ def train_model_and_save_evals(lookback, horizon, n_vars, stack_types, thetas_di
 if __name__ == '__main__':
     plot = False
 
-    steps = [(7, 1), (15, 1), (15, 7), (30, 1), (30, 7), (30, 15)]
+    steps = [(60, 1), (60, 10), (60, 15), (60, 30),
+             (90, 1), (90, 10), (90, 15), (90, 30),
+             (120, 1), (120, 10), (120, 15), (120, 30),
+             ]
     n_vars = [i for i in range(1, 9)]
 
     stacks = [ 
               (('trend', 'seasonality'), [(1,8), (2,8), (3,8), (4,8)]), 
-              (('seasonality', 'seasonality'), [(8,8), (8,8), (8,8), (8,8)]),
-              (('trend', 'trend'), [(1, 1), (2,2), (3,3), (4,4)]),
+            #   (('seasonality', 'seasonality'), [(8,8), (8,8), (8,8), (8,8)]),
+            #   (('trend', 'trend'), [(1, 1), (2,2), (3,3), (4,4)]),
             ]
     blocks = [1,2,3]
     epochs = [15]
+    
+    sinusodial=True
 
     for s in steps:
         lookback, horizon = s
         for v in n_vars:
-            train_X, train_y, val_X, val_y, test_X, test_y =  get_data(lookback, horizon, v, plot)
+            train_X, train_y, val_X, val_y, test_X, test_y =  get_data(lookback, horizon, v, plot, sinusodial=sinusodial)
             for st in stacks:
                 stack_types, thetas = st
                 for thetas_dim in thetas:

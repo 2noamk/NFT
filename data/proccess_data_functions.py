@@ -124,15 +124,22 @@ def plot_data(data, data_len, n_series):
 
 def plot_df(df):
     num_cols = df.shape[1]
+    num_rows = (num_cols + 4) // 5  # Calculate the number of rows needed, rounding up
 
-    _, axes = plt.subplots(num_cols, 1, figsize=(10, 4 * num_cols))  # Adjusting the size for better visibility
-
+    fig, axes = plt.subplots(num_rows, min(num_cols, 5), figsize=(20, 4 * num_rows))  # Adjusting the size for better visibility
+        
     for i, col in enumerate(df.columns):
-        df[col].plot(ax=axes[i], title=col)
-        axes[i].set_ylabel(col)
+        row, col_num = divmod(i, 5)
+        if num_rows > 1:  # If there are multiple rows, access the subplot as a 2D array
+            ax = axes[row][col_num]
+        else:  # If there is only one row, access the subplot as a 1D array
+            ax = axes[col_num]
+        df[col].plot(ax=ax, title=col)
+        ax.set_ylabel(col)
 
     plt.tight_layout()
     plt.show()
+
 
     
 def get_poccesed_data(dir_path, lookback, horizon, n_rows=None):
@@ -161,8 +168,10 @@ def get_processed_data_many_series(dir_path, lookback, horizon, n_train, n_val, 
     def process_files(file_list):
         data = []
         for filename in file_list:
+            print(f"file={filename}")
             file_path = os.path.join(dir_path, filename)
             df = get_df_without_outliers(file_path, n_cols=n_cols)
+            print(df.head())
             df_tensor = torch.tensor(df.values, dtype=torch.float32)
             d = dataset(df_tensor, lookback, horizon)
             data.append((d.X, d.y))

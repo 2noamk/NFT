@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from lists import Stations, Ecg, EEG
 
 data_to_num_cols = {
@@ -18,10 +18,11 @@ data_to_num_cols = {
 data_to_num_vars_dict = {
     'ecg': 12, 
     'ecg_single': 12, 
-    'eeg': 3, 
+    'eeg': 36, 
     'eeg_single': 36, 
     'chorales': 6, 
     'noaa': 3,
+    'noaa_1955': 3,
     'air_quality': 13, 
     'cabs': 4
     }
@@ -40,9 +41,9 @@ data_to_num_of_series = {
 
 
 data_to_raw_data_path = {
-    'ecg': 'NFT/data/ecg/600_pkl_files', 
+    'ecg': '/home/noam.koren/multiTS/NFT/data/ecg/pkl_files', 
     'eeg': '/home/noam.koren/multiTS/NFT/data/eeg/eval_normal_pkl',
-    'chorales': 'NFT/data/chorales/chorales_pkl', 
+    'chorales': '/home/noam.koren/multiTS/NFT/data/chorales/chorales_pkl', 
     'cabs': '/home/noam.koren/multiTS/NFT/data/cabs/cabs_150_pkl'
     }
 
@@ -74,14 +75,24 @@ data_to_steps = {
     (360, 1), (360, 7), (360, 15), (360, 30), (360, 60), (360, 90),(360, 120), (360, 180),
     (720, 1), (720, 7), (720, 15), (720, 30), (720, 60), (720, 180), (720, 360)
     ],
+    'noaa_1955': [
+    (7, 1), 
+    (14, 1), (14, 7),
+    ],
     'ecg': [
     (50, 1), (50, 10),
     (100, 1), (100, 5), (100, 10), (100, 15), (100, 20), 
     (100, 25), (100,30), 
-    (200, 1), (200, 10), (200, 25),
+    (200, 1), (200, 5), (200, 10), (200, 15),  (200, 20), (200, 25),
     ],
     'eeg': [
-    (100, 1), (100, 10), (100, 20),
+    (50, 1), (50, 10), 
+    # (100, 1), (100, 10), 
+    (100, 5), (100, 15), 
+    (100, 20),
+    (200, 1), (200, 10), 
+    (200, 5), (200, 15), 
+    (200, 20),
     ],
     'ecg_single': [
     (50, 1), (50, 10),

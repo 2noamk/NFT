@@ -1,13 +1,13 @@
 import sys
 
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list
 
 from data.proccess_data_functions import get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
 def process_data(data, lookback, horizon, series=None):
-    path = f"NFT/data/"
+    path = f"/home/noam.koren/multiTS/NFT/data/"
     
     if data == 'noaa':
         df = get_df_without_outliers(
@@ -18,6 +18,10 @@ def process_data(data, lookback, horizon, series=None):
     elif data == 'eeg_single':
         df = get_df_without_outliers(
             f'{path}eeg/eval_normal_pkl/{series}.pkl')
+    elif data == 'noaa_1955':
+        df = get_df_without_outliers(
+            f'{path}noaa/noaa_ghcn/noaa_pkl/noaa_AE000041196_1955.pkl')
+        
     else:
         df = get_df_without_outliers(path + f'{data}/{data}.pkl') 
            
@@ -63,7 +67,7 @@ def process_data(data, lookback, horizon, series=None):
 
 
 def main():
-    data = 'air_quality'
+    data = 'noaa_1955'
     if data in ['noaa', 'eeg_single', 'ecg_single']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:
