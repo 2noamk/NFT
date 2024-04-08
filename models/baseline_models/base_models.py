@@ -2,6 +2,7 @@ import pickle
 import random
 from time import time
 from typing import Union
+from transformers import PatchTSTConfig, PatchTSTModel
 
 import numpy as np
 import torch
@@ -337,6 +338,53 @@ class TCN(nn.Module):
         return predictions
 
 
+class ForecastingHead(nn.Module):
+    def __init__(self, input_dim, context_length, horizon, num_variables):
+        super().__init__()
+        self.horizon = horizon
+        self.num_variables = num_variables
+        self.flatten = nn.Flatten(start_dim=2)
+        self.linear = nn.Linear(input_dim * context_length, horizon)
+
+    def forward(self, x):
+        x = self.flatten(x)
+        x = self.linear(x)
+        return x.view(-1, self.horizon, self.num_variables)
+
+
+class PatchTST(nn.Module):
+    def __init__(self, n_vars, lookback, horizon):
+        super().__init__()        
+        config = PatchTSTConfig(
+            num_input_channels=n_vars,
+            context_length=lookback,
+            prediction_length=horizon,
+            num_attention_heads=16,  # As stated in the paper for default PatchTST configuration
+            num_hidden_layers=3,  # As stated in the paper for default PatchTST configuration
+            d_model=128,  # As stated in the paper for default PatchTST configuration
+            ffn_dim=256,  # As stated in the paper, this corresponds to F in the feed forward network
+            dropout=0.2,  # As stated in the paper for default PatchTST configuration
+
+        )
+        self.base_model = PatchTSTModel(config)
+        self.forecast_head = ForecastingHead(
+            input_dim=128, 
+            context_length=lookback, 
+            horizon=horizon, 
+            num_variables=n_vars
+            )
+
+    def forward(self, x):
+        base_outputs = self.base_model(past_values=x).last_hidden_state
+        return self.forecast_head(base_outputs)
+    
+    def predict(self, x):        
+        self.eval()
+        with torch.no_grad():
+            predictions = self.forward(x)
+        return predictions
+
+   
 class NBeatsNet(nn.Module):
     SEASONALITY_BLOCK = 'seasonality'
     TREND_BLOCK = 'trend'

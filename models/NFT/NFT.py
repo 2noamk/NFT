@@ -290,7 +290,10 @@ class NFT(nn.Module):
                     (output_type == 'trend' and block_type == 'TrendBlock') or
                     (output_type == 'seasonality' and block_type == 'SeasonalityBlock')):
 
-                    b, f, theta_f = block(backcast, return_thetas=True)
+
+                    if return_thetas: b, f, theta_f = block(backcast, return_thetas)
+                    else: b, f = block(backcast, return_thetas)
+                    
                     backcast = backcast - b  
                     forecast = forecast.to(f.device) + f
 
@@ -543,7 +546,7 @@ class GenericBlock(Block):
 
         backcast = self.backcast_fc(theta_b).reshape(batch_size, self.backcast_length, self.n_vars) 
         forecast = self.forecast_fc(theta_f).reshape(batch_size, self.forecast_length, self.n_vars) 
-
+        
         return backcast, forecast
     
     

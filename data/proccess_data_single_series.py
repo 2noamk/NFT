@@ -2,26 +2,32 @@ import sys
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list
-
+from lists import noaa_years
 from data.proccess_data_functions import get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
-def process_data(data, lookback, horizon, series=None):
+def process_data(data, lookback, horizon, series=None, year=None):
     path = f"/home/noam.koren/multiTS/NFT/data/"
     
     if data == 'noaa':
         df = get_df_without_outliers(
             f'{path}noaa/noaa_ghcn/noaa_pkl/{series}.pkl')
+    elif data == 'ett':
+        df = get_df_without_outliers(
+            f'{path}ett/pkl_files/{series}.pkl')
+    elif data == 'weather':
+        df = get_df_without_outliers(
+            f'{path}weather/weather_no_date.pkl')
     elif data == 'ecg_single':
         df = get_df_without_outliers(
             f'{path}ecg/csv_files/{series}.pkl')
     elif data == 'eeg_single':
         df = get_df_without_outliers(
             f'{path}eeg/eval_normal_pkl/{series}.pkl')
-    elif data == 'noaa_1955':
+    elif data[0:4] == 'noaa':
+        print(series, year)
         df = get_df_without_outliers(
-            f'{path}noaa/noaa_ghcn/noaa_pkl/noaa_AE000041196_1955.pkl')
-        
+            f'{path}noaa/noaa_ghcn/years/embedded/{series}/{series}_{year}.pkl')
     else:
         df = get_df_without_outliers(path + f'{data}/{data}.pkl') 
            
@@ -42,8 +48,10 @@ def process_data(data, lookback, horizon, series=None):
         test_dataset.X, test_dataset.y
     )
         
-        
-    if series is None: 
+    
+    if year is not None:
+        pkl_path = f'{path}{data[0:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
+    elif series is None:
         pkl_path = f'{path}{data}/{data}_{lookback}l_{horizon}h/'
     else:
         pkl_path = f'{path}{data}/{series}/{series}_{lookback}l_{horizon}h/'
@@ -67,8 +75,8 @@ def process_data(data, lookback, horizon, series=None):
 
 
 def main():
-    data = 'noaa_1955'
-    if data in ['noaa', 'eeg_single', 'ecg_single']:
+    data = 'weather'
+    if data in ['noaa', 'eeg_single', 'ecg_single', 'ett']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:
                 lookback, horizon = step
@@ -78,6 +86,19 @@ def main():
                     horizon=horizon,
                     series=series
                 )
+    elif data == 'noaa_years':
+        for step in data_to_steps[data]:
+            for series in  single_data_to_series_list[data[0:4]]:
+                lookback, horizon = step
+                for year in noaa_years:
+                    process_data(
+                        data=f'noaa_{series}_{year}',
+                        lookback=lookback, 
+                        horizon=horizon,
+                        series=series,
+                        year=year
+                    )  
+     
     else:
         for step in data_to_steps[data]:
             lookback, horizon = step

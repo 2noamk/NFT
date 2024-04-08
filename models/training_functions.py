@@ -66,8 +66,10 @@ def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):
 
     if data in ['ecg', 'eeg']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_{n_series}series/"
-    elif data in ['eeg_single', 'ecg_single', 'noaa']:
+    elif data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
+    elif data[:4] == 'noaa':
+        data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{data[-4:]}_{lookback}l_{horizon}h/'
     else:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h/"
 
@@ -223,7 +225,8 @@ def save_predictions_in_excel(y=None, predictions=None, idx=None, horizon=None, 
     return df 
 
 
-def train_model(dataset, epochs, model, train_X, train_y, val_X, val_y, lookback, horizon, n_vars=1, batch_size=32, print_epoch=10, path_to_save_prediction_plots=None, device='cpu'):
+def train_model(dataset, epochs, model, train_X, train_y, val_X, val_y, lookback, horizon, n_vars=1, batch_size=32, print_epoch=10, 
+                path_to_save_prediction_plots=None, device='cpu'):
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters())
 
@@ -351,6 +354,10 @@ def calculate_mase(y_true, y_pred):
     return mae_pred / mae_naive if mae_naive != 0 else np.inf
 
 
+def calculate_mae(y_true, y_pred):
+    return torch.mean(torch.abs(y_pred - y_true))
+
+
 def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     def print_evaluation(train_mse, val_mse, test_mse,
                         train_smape, val_smape, test_smape, 
@@ -407,7 +414,7 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     return train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
 
 
-def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, is_poly, series, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
+def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_types, is_poly, num_channels, series, train_mse, test_mse, train_mae, test_mae, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
         
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
@@ -420,16 +427,24 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, is_poly
     file_path = f"{base_dir}/{model}_{data}_results.xlsx"
         
     if Path(file_path).is_file(): df = pd.read_excel(file_path)
-    else: df = pd.DataFrame(columns=["Data", "Lookback", "Horizon", "Epochs", "Blocks", "Is Poly",
-                                   "train_mse", "test_mse", "train_smape", "test_smape", 
-                                   "train_mape", "test_mape", "train_mase", "test_mase"])
+    else: df = pd.DataFrame(columns=[
+        "Data", "Lookback", "Horizon", "Epochs", 
+        "Stack types", "Blocks", "Is Poly", "num_channels",
+        "train_mse", "test_mse", 
+        "train_mae", "test_mae", 
+        "train_smape", "test_smape", 
+        "train_mape", "test_mape", 
+        "train_mase", "test_mase"
+        ])
     
     if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
     if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
         
     new_row = {"Data": data, "Lookback": lookback, "Horizon": horizon, 
-               "Epochs": epochs, "Blocks": blocks, "Is Poly": is_poly,
-               "train_mse": train_mse, "test_mse": test_mse, 
+               "Epochs": epochs, "Stack types": stack_types,
+               "Blocks": blocks, "Is Poly": is_poly, "num_channels": num_channels,
+               "train_mse": train_mse, "test_mse": test_mse,  
+               "train_mae": train_mae, "test_mae": test_mae, 
                "train_smape": train_smape, "test_smape": test_smape, 
                "train_mape": train_mape, "test_mape": test_mape, 
                "train_mase": train_mase, "test_mase": test_mase}
