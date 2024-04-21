@@ -3,34 +3,13 @@ import sys
 sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list
 from lists import noaa_years
-from data.proccess_data_functions import get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
+from data.proccess_data_functions import data_to_raw_data_path, get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
-def process_data(data, lookback, horizon, series=None, year=None):
+def process_data(data, lookback, horizon, series=None, year=None, with_date=True):
     path = f"/home/noam.koren/multiTS/NFT/data/"
-    
-    if data == 'noaa':
-        df = get_df_without_outliers(
-            f'{path}noaa/noaa_ghcn/noaa_pkl/{series}.pkl')
-    elif data == 'ett':
-        df = get_df_without_outliers(
-            f'{path}ett/pkl_files/{series}.pkl')
-    elif data == 'weather':
-        df = get_df_without_outliers(
-            f'{path}weather/weather_no_date.pkl')
-    elif data == 'ecg_single':
-        df = get_df_without_outliers(
-            f'{path}ecg/csv_files/{series}.pkl')
-    elif data == 'eeg_single':
-        df = get_df_without_outliers(
-            f'{path}eeg/eval_normal_pkl/{series}.pkl')
-    elif data[0:4] == 'noaa':
-        print(series, year)
-        df = get_df_without_outliers(
-            f'{path}noaa/noaa_ghcn/years/embedded/{series}/{series}_{year}.pkl')
-    else:
-        df = get_df_without_outliers(path + f'{data}/{data}.pkl') 
-           
+
+    df = get_df_without_outliers(data_to_raw_data_path(data, series, year))
     n = len(df)
     train_size, val_size, test_size = int(0.5*n), int(0.2*n), int(0.3*n)
     
@@ -40,7 +19,15 @@ def process_data(data, lookback, horizon, series=None, year=None):
             
     train_data, val_data, test_data = impute_Data(train_df, val_df, test_df)
     
-    train_dataset, val_dataset, test_dataset = get_datasets(train_data, val_data, test_data, lookback, horizon)
+    train_dataset, val_dataset, test_dataset = get_datasets(
+        train_df=train_data, 
+        val_df=val_data, 
+        test_df=test_data, 
+        lookback=lookback, 
+        horizon=horizon,
+        label_len=label_len,
+        with_date=True
+        )
            
     X_train_standardized, y_train_standardized, X_val_standardized, y_val_standardized, X_test_standardized, y_test_standardized = standardize_data(
         train_dataset.X, train_dataset.y,
@@ -48,19 +35,31 @@ def process_data(data, lookback, horizon, series=None, year=None):
         test_dataset.X, test_dataset.y
     )
         
-    
+    d = '_date_stamp' if with_date else ''
     if year is not None:
         pkl_path = f'{path}{data[0:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
+        if with_date: date_stamp_path = f'{path}{data[0:4]}/years/{series}/{series}_date_stamp_{year}_{lookback}l_{horizon}h/'
     elif series is None:
         pkl_path = f'{path}{data}/{data}_{lookback}l_{horizon}h/'
+        if with_date: date_stamp_path = f'{path}{data}/{data}_date_stamp_{lookback}l_{horizon}h/'
     else:
         pkl_path = f'{path}{data}/{series}/{series}_{lookback}l_{horizon}h/'
+        if with_date: date_stamp_path = f'{path}{data}/{series}/{series}_date_stamp_{lookback}l_{horizon}h/'
+    
+    
     
     save_to_pkl(pkl_path,
         X_train_standardized, y_train_standardized, 
         X_val_standardized, y_val_standardized,
         X_test_standardized, y_test_standardized)
     
+    if with_date: 
+        save_to_pkl(date_stamp_path,
+        train_dataset.X_mark, train_dataset.y_mark,
+        val_dataset.X_mark, val_dataset.y_mark,
+        test_dataset.X_mark, test_dataset.y_mark
+        )
+        
     print(f"saved to: {pkl_path}")
 
     # num_of_vars = data_to_num_vars_dict[data]
@@ -75,7 +74,7 @@ def process_data(data, lookback, horizon, series=None, year=None):
 
 
 def main():
-    data = 'weather'
+    data = 'noaa'
     if data in ['noaa', 'eeg_single', 'ecg_single', 'ett']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:
@@ -84,7 +83,8 @@ def main():
                     data=data,
                     lookback=lookback, 
                     horizon=horizon,
-                    series=series
+                    series=series,
+                    with_date=True
                 )
     elif data == 'noaa_years':
         for step in data_to_steps[data]:
@@ -106,7 +106,8 @@ def main():
                 data=data,
                 lookback=lookback, 
                 horizon=horizon,
-                series=None
+                series=None,
+                with_date=True
             )  
     
 

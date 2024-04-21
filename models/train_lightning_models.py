@@ -11,7 +11,7 @@ from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, s
 from lists import noaa_years
 from models.training_functions import get_data, calculate_smape, calculate_mape, calculate_mase, calculate_mae, add_results_to_excel, get_model_name, get_path, save_model
 from models.NFT.NFT import NFT
-from models.baseline_models.base_models import TCN, TimeSeriesTransformer, LSTM, PatchTST
+from models.baseline_models.base_models import TCN, TimeSeriesTransformer, LSTM
 
 torch.set_float32_matmul_precision('high')
 
@@ -226,25 +226,66 @@ class Model(pl.LightningModule):
             # Reset accumulators for the next epoch
             self.cumulative_test_loss = 0.0
             self.test_batch_count = 0
-            
+
+ 
+    def calculate_mase(y_true, y_pred, seasonal_period=1):
+        # Naive forecast (shifted true values by the seasonal period)
+        naive_forecast = torch.roll(y_true, shifts=seasonal_period, dims=0)
+        naive_errors = torch.mean(torch.abs(y_true[seasonal_period:] - naive_forecast[seasonal_period:]))
+        prediction_errors = torch.mean(torch.abs(y_true - y_pred))
+        return prediction_errors / naive_errors
+
     def compute_metrics(self, dataloader):
-        smape_values, mape_values, mase_values, mae_values = [], [], [], []
+        preds, trues = [], []
+
         for batch in dataloader:
             x, y = batch
             y_hat = self.model.predict(x)
-            smape_values.append(calculate_smape(y, y_hat).item())
-            mape_values.append(calculate_mape(y, y_hat).item())
-            mae_values.append(calculate_mae(y, y_hat).item())
-            mase_result = calculate_mase(y, y_hat)
-            if torch.is_tensor(mase_result): mase_values.append(mase_result.item())
-            else: mase_values.append(mase_result)
-        return {
-            'smape': np.mean(smape_values),
-            'mape': np.mean(mape_values),
-            'mase': np.mean(mase_values),
-            'mae': np.mean(mae_values)
+            preds.append(y_hat.detach().cpu())
+            trues.append(y.detach().cpu())
 
+        # Concatenate all batch predictions and true values
+        preds = torch.cat(preds, dim=0)
+        trues = torch.cat(trues, dim=0)
+
+        # Calculate metrics on the entire dataset
+        mae = torch.mean(torch.abs(preds - trues)).item()
+        mse = torch.mean((preds - trues) ** 2).item()
+        rmse = torch.sqrt(torch.mean((preds - trues) ** 2)).item()
+        mspe = torch.mean(((preds - trues) / trues) ** 2).item()
+        mape = calculate_mape(trues, preds).item()
+        smape = calculate_smape(trues, preds).item()
+        mase = calculate_mase(trues, preds).item()
+
+        return {
+            'mae': mae,
+            'mse': mse,
+            'rmse': rmse,
+            'mspe': mspe,
+            'mape': mape,
+            'smape': smape,
+            'mase': mase
         }
+
+            
+    # def compute_metrics(self, dataloader):
+    #     smape_values, mape_values, mase_values, mae_values = [], [], [], []
+    #     for batch in dataloader:
+    #         x, y = batch
+    #         y_hat = self.model.predict(x)
+    #         smape_values.append(calculate_smape(y, y_hat).item())
+    #         mape_values.append(calculate_mape(y, y_hat).item())
+    #         mae_values.append(calculate_mae(y, y_hat).item())
+    #         mase_result = calculate_mase(y, y_hat)
+    #         if torch.is_tensor(mase_result): mase_values.append(mase_result.item())
+    #         else: mase_values.append(mase_result)
+    #     return {
+    #         'smape': np.mean(smape_values),
+    #         'mape': np.mean(mape_values),
+    #         'mase': np.mean(mase_values),
+    #         'mae': np.mean(mae_values)
+
+    #     }
 
 
 def train_lightning_model(
@@ -317,8 +358,8 @@ def train_lightning_model(
         is_poly=is_poly,
         num_channels=num_channels,
         series=series, 
-        train_mse=model.train_loss[-1], 
-        test_mse=model.test_loss[-1], 
+        train_mse=train_metrics['mse'], 
+        test_mse=train_metrics['mse'], 
         train_mae=train_metrics['mae'], 
         test_mae=test_metrics['mae'], 
         train_smape=train_metrics['smape'], 
@@ -356,21 +397,23 @@ def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
     model_type = 'nft'
     """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'weather'
+    data = 'air_quality'
     out_txt_name = f"{model_type}_{data}.txt"
-    tcn_channels = [[25, 50],[25, 25],[2,2]]
-    epochs = [10, 20, 30]
-    blocks_lst = [2, 3, 4, 5, 6, 7]
+    tcn_channels = [[2,2]] #[[25, 50],[25, 25],[2,2]]
+    num_channels = [2,2]
+    epochs = [10]
+    blocks_lst = [3] #[2, 3, 4, 5, 6, 7]
     layers_type = 'tcn'
     is_poly = False
     thetas_dim = (4,8)
-    stacks=[
-        (('trend', 'seasonality'), (4,8)),1
-        (('trend', 'seasonality', 'generic'), (4,8,8)), 
-        (('generic', 'trend', 'seasonality'), (8,4,8)), 
-        (('generic', 'trend', 'seasonality', 'generic'), (8,4,8,8)), 
-        (('generic', 'generic'), (8,8)),
-        ]
+    stacks= [(('trend', 'seasonality'), (4,8))]
+    # [
+    #     (('trend', 'seasonality'), (4,8)),
+    #     (('trend', 'seasonality', 'generic'), (4,8,8)), 
+    #     (('generic', 'trend', 'seasonality'), (8,4,8)), 
+    #     (('generic', 'trend', 'seasonality', 'generic'), (8,4,8,8)), 
+    #     (('generic', 'generic'), (8,8)),
+    #     ]
 
     print(f"data = {data}")
     
@@ -426,7 +469,7 @@ def main():
                                         lookback=lookback,
                                         horizon=horizon,
                                         num_epochs=num_epochs,
-                                        blocks=blocks if model_type=='nft' else 0,
+                                        blocks=blocks,
                                         out_txt_name=out_txt_name,
                                         print_stats=False,
                                         series=None,

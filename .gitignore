@@ -9,6 +9,8 @@
 *.xlsx
 *.yaml
 *.json
+*.pdf
+lightning_logs/*
 lightning_logs/version_0/events.out.tfevents.1705231227.newton3.544530.0
 lightning_logs/version_1/events.out.tfevents.1705594272.newton3.1633459.0
 lightning_logs/version_2/events.out.tfevents.1705594310.newton3.1634983.0
@@ -16,5 +18,6 @@ lightning_logs/version_3/events.out.tfevents.1705594359.newton3.1636521.0
 lightning_logs/version_5/events.out.tfevents.1705601654.newton3.1688815.0
 lightning_logs/version_4/events.out.tfevents.1705594416.newton3.1637767.0
 *.0
+*.ckpt
 lightning_logs/version_7/events.out.tfevents.1705602327.newton3.1693028.0
 lightning_logs/version_6/events.out.tfevents.1705601941.newton3.1690492.0

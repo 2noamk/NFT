@@ -64,7 +64,7 @@ def read_all_data_and_print_stats(data_path, print_stats=True):
 def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):    
     data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
 
-    if data in ['ecg', 'eeg']:
+    if data in ['ecg', 'eeg', 'eeg_3_lead']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_{n_series}series/"
     elif data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
