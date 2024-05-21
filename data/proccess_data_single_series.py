@@ -1,14 +1,14 @@
 import sys
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list
+from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list, data_to_label_len
 from lists import noaa_years
-from data.proccess_data_functions import data_to_raw_data_path, get_df_without_outliers, impute_Data, standardize_data, get_datasets, save_to_pkl, plot_data
+from data.proccess_data_functions import data_to_raw_data_path, get_df_without_outliers, impute_data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
 def process_data(data, lookback, horizon, series=None, year=None, with_date=True):
     path = f"/home/noam.koren/multiTS/NFT/data/"
-
+    
     df = get_df_without_outliers(data_to_raw_data_path(data, series, year))
     n = len(df)
     train_size, val_size, test_size = int(0.5*n), int(0.2*n), int(0.3*n)
@@ -17,7 +17,7 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
     val_df = df[train_size:train_size + val_size]
     test_df = df[train_size + val_size:train_size + val_size + test_size]
             
-    train_data, val_data, test_data = impute_Data(train_df, val_df, test_df)
+    train_data, val_data, test_data = impute_data(train_df, val_df, test_df)
     
     train_dataset, val_dataset, test_dataset = get_datasets(
         train_df=train_data, 
@@ -25,7 +25,7 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
         test_df=test_data, 
         lookback=lookback, 
         horizon=horizon,
-        label_len=label_len,
+        label_len=data_to_label_len[data],
         with_date=True
         )
            
@@ -34,8 +34,12 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
         val_dataset.X, val_dataset.y,
         test_dataset.X, test_dataset.y
     )
+    
+    
+    print(f'X_train = {X_train_standardized.shape}, y_train = {y_train_standardized.shape}')
+    print(f'X_val = {X_val_standardized.shape}, y_val = {y_val_standardized.shape}')
+    print(f'X_test = {X_test_standardized.shape}, y_test = {y_test_standardized.shape}')
         
-    d = '_date_stamp' if with_date else ''
     if year is not None:
         pkl_path = f'{path}{data[0:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
         if with_date: date_stamp_path = f'{path}{data[0:4]}/years/{series}/{series}_date_stamp_{year}_{lookback}l_{horizon}h/'
@@ -45,8 +49,6 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
     else:
         pkl_path = f'{path}{data}/{series}/{series}_{lookback}l_{horizon}h/'
         if with_date: date_stamp_path = f'{path}{data}/{series}/{series}_date_stamp_{lookback}l_{horizon}h/'
-    
-    
     
     save_to_pkl(pkl_path,
         X_train_standardized, y_train_standardized, 
@@ -74,7 +76,7 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
 
 
 def main():
-    data = 'noaa'
+    data = 'electricity'
     if data in ['noaa', 'eeg_single', 'ecg_single', 'ett']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:

@@ -24,10 +24,10 @@ class dataset(Dataset):
 
         for i in range(self.sequence_length, data.shape[0] - self.horizon):  
             self.X.append(data[i - self.sequence_length:i])
-            self.y.append(data[i - self.label_len:i + self.label_len + self.horizon]) 
+            self.y.append(data[i - self.label_len:i + self.horizon]) 
             if self.add_date:
                 self.X_mark.append(data_stamp[i - self.sequence_length:i])
-                self.y_mark.append(data_stamp[i - self.label_len:i + self.label_len + self.horizon]) 
+                self.y_mark.append(data_stamp[i - self.label_len:i + self.horizon]) 
 
         self.X = torch.stack(self.X)
         self.y = torch.stack(self.y)
@@ -47,15 +47,22 @@ def data_to_raw_data_path(data, series=None, year=None):
     base_path = "/home/noam.koren/multiTS/NFT/data/"
     path_mappings = {
         'noaa': lambda: f'{base_path}noaa/noaa_ghcn/noaa_pkl/{series}.pkl',
-        'ett': lambda: f'{base_path}ett/pkl_files/{series}.pkl',
-        'weather': lambda: f'{base_path}weather/weather_no_date.pkl',
-        'ecg_single': lambda: f'{base_path}ecg/csv_files/{series}.pkl',
+        'ecg_single': lambda: f'{base_path}ecg/pkl_files/{series}.pkl',
         'eeg_single': lambda: f'{base_path}eeg/eval_normal_pkl/{series}.pkl',
         'noaa_year': lambda: f'{base_path}noaa/noaa_ghcn/years/embedded/{series}/{series}_{year}.pkl',
         'ecg': lambda: f'{base_path}ecg/pkl_files', 
         'eeg': lambda: f'{base_path}eeg/eval_normal_pkl',
         'chorales': lambda: f'{base_path}chorales/chorales_pkl', 
-        'cabs': lambda: f'{base_path}cabs/cabs_150_pkl'
+        'cabs': lambda: f'{base_path}cabs/cabs_150_pkl',
+        'electricity': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
+        'etth1': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTh1.csv',
+        'etth2': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTh2.csv',
+        'ettm1': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTm1.csv',
+        'ettm2': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTm2.csv',
+        'exchange_rate': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
+        'illness': lambda: f'{base_path}autoformer_datasets/{data}/national_illness.csv',
+        'traffic': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
+        'weather':lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
     }
 
     # Check if the 'data' key starts with 'noaa' and the year is specified
@@ -82,25 +89,41 @@ def remove_outliers(df):
 
 
 def get_df_without_outliers(path, n_cols=None):
-    df = pd.read_pickle(path) 
+    # Determine the file extension and read the file accordingly
+    if path.endswith('.pkl'):  df = pd.read_pickle(path)
+    elif path.endswith('.csv'):  df = pd.read_csv(path)
+    else: raise ValueError("Unsupported file type. Please use a .csv or .pkl file.")
     if n_cols: df = df.iloc[:, 0:3]
     return remove_outliers(df)
 
 
-def impute_Data(train_df, val_df, test_df):
+def impute_data(train_df, val_df, test_df):
+    # Identify numeric columns (excluding date or categorical data)
+    numeric_cols = train_df.select_dtypes(include=[np.number]).columns
+
+    # Create an imputer instance for numeric data
     imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-    imputer.fit(train_df)
-    
-    # train_data = torch.tensor(imputer.transform(train_df))
-    # val_data = torch.tensor(imputer.transform(val_df))
-    # test_data = torch.tensor(imputer.transform(test_df))
 
+    # Fit the imputer only on the numeric columns of the training data
+    imputer.fit(train_df[numeric_cols])
 
-    train_data = pd.DataFrame(imputer.transform(train_df), columns=train_df.columns, index=train_df.index)
-    val_data = pd.DataFrame(imputer.transform(val_df), columns=val_df.columns, index=val_df.index)
-    test_data = pd.DataFrame(imputer.transform(test_df), columns=test_df.columns, index=test_df.index)
+    # Function to impute and reconstruct DataFrame
+    def impute_and_reconstruct(df):
+        # Impute numeric columns
+        imputed_data = imputer.transform(df[numeric_cols])
+        # Construct the new DataFrame with imputed numeric data and original non-numeric data
+        new_df = pd.DataFrame(imputed_data, columns=numeric_cols, index=df.index)
+        # Reattach non-numeric columns to the DataFrame
+        non_numeric = df.drop(columns=numeric_cols)
+        return pd.concat([new_df, non_numeric], axis=1)
+
+    # Impute and reconstruct each dataset
+    train_data = impute_and_reconstruct(train_df)
+    val_data = impute_and_reconstruct(val_df)
+    test_data = impute_and_reconstruct(test_df)
 
     return train_data, val_data, test_data
+
 
 
 def standardize_data(X_train, y_train, X_val, y_val, X_test, y_test):
@@ -237,6 +260,10 @@ def get_dataset_with_date(df, lookback, horizon, label_len):
        
 def get_datasets(train_df, val_df, test_df, lookback, horizon, label_len, with_date=True):
     if not with_date:
+        if 'date' in list(train_df.columns): 
+            train_df = train_df.drop('date', axis=1)
+            val_df = val_df.drop('date', axis=1)
+            test_df = test_df.drop('date', axis=1)
         train_dataset = dataset(data=train_df,
                                 lookback=lookback,
                                 horizon=horizon, 
@@ -259,7 +286,7 @@ def get_datasets(train_df, val_df, test_df, lookback, horizon, label_len, with_d
     return train_dataset, val_dataset, test_dataset
 
 
-def get_processed_data_many_series(dir_path, lookback, horizon, n_train, n_val, n_cols=None, with_date=False):
+def get_processed_data_many_series(dir_path, lookback, horizon, label_len, n_train, n_val, n_cols=None, with_date=False):
     filenames = [f for f in os.listdir(dir_path) if f.endswith('.pkl')]
     filenames.sort()  # Sort the filenames for consistency
 
@@ -289,7 +316,7 @@ def get_processed_data_many_series(dir_path, lookback, horizon, n_train, n_val, 
             file_path = os.path.join(dir_path, filename)
             df = get_df_without_outliers(file_path, n_cols=n_cols)
             
-            d = get_dataset_with_date(df, lookback, horizon)
+            d = get_dataset_with_date(df, lookback, horizon, label_len)
             
             data.append((d.X, d.y, d.X_mark, d.y_mark))
 

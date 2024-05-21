@@ -26,3 +26,4 @@ lightning_logs/version_6/events.out.tfevents.1705601941.newton3.1690492.0
 bin/python
 bin/*
 lib/*
+*.npy

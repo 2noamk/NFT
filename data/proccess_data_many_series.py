@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, data_to_num_cols
+from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, data_to_num_cols, data_to_label_len
 
 from data.proccess_data_functions import data_to_raw_data_path, get_processed_data_many_series, standardize_data, save_to_pkl
 
@@ -18,6 +18,7 @@ def process_data(data, lookback, horizon, with_date=True):
         dir_path=data_to_raw_data_path(data), 
         lookback=lookback, 
         horizon=horizon,
+        label_len=data_to_label_len[data],
         n_train=n_train,
         n_val=n_val,
         n_cols=data_to_num_cols[data],
@@ -83,7 +84,7 @@ def process_data(data, lookback, horizon, with_date=True):
 
 
 def main():
-    data = 'eeg'
+    data = 'ecg'
     for step in data_to_steps[data]:
         lookback, horizon = step
         process_data(

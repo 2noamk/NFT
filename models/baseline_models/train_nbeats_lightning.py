@@ -1,4 +1,5 @@
 import sys
+import time
 import torch
 import numpy as np
 import pytorch_lightning as pl
@@ -6,9 +7,9 @@ import torch.nn.functional as F
 from nbeats_pytorch.model import NBeatsNet
 from torch.utils.data import DataLoader, TensorDataset
 
-sys.path.append('NFT/')
+sys.path.append('/home/noam.koren/multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
-from models.training_functions import get_data, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel, get_model_name, get_path, save_model
+from models.training_functions import add_run_time_to_excel, get_data, calculate_smape, calculate_mape, calculate_mase, add_results_to_excel, get_model_name, get_path, save_model
 from models.NFT.NFT import NFT
 from models.baseline_models.base_models import NBeatsNet, TCN, TimeSeriesTransformer, LSTM
 
@@ -55,14 +56,21 @@ class Model(pl.LightningModule):
         self.val_batch_count = 0
         self.cumulative_test_loss = 0.0
         self.test_batch_count = 0
+        
+        self.predictions = []
+        self.trues = []
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(x)[1]
 
     def training_step(self, batch, batch_idx):
-        print("training_step")
         x, y = batch
         y_hat = self(x)
+
+        if isinstance(y_hat, tuple):
+            y_hat = y_hat[0] 
+        if isinstance(y, tuple):
+            y = y[0]
         loss = F.mse_loss(y_hat, y)
         self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
         
@@ -74,6 +82,11 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+
+        if isinstance(y_hat, tuple):
+            y_hat = y_hat[0] 
+        if isinstance(y, tuple):
+            y = y[0]
         loss = F.mse_loss(y_hat, y)
         self.log('val_loss', loss, sync_dist=True)
 
@@ -86,12 +99,18 @@ class Model(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+
+        if isinstance(y_hat, tuple):
+            y_hat = y_hat[0] 
+        if isinstance(y, tuple):
+            y = y[0]
         loss = F.mse_loss(y_hat, y)
         self.log('test_loss', loss, prog_bar=True, sync_dist=True)
    
-        # Update accumulators
         self.cumulative_test_loss += loss.item()
         self.test_batch_count += 1
+        self.predictions.append(y_hat.detach())
+        self.trues.append(y.detach())
 
         return {'test_loss': loss}
     
@@ -117,20 +136,14 @@ class Model(pl.LightningModule):
         test_X = test_X.reshape(-1, self.lookback, self.num_vars)
         test_y = test_y.reshape(-1, self.horizon, self.num_vars)
         
-        print(f"train_X.shape = {train_X.shape}")
-
         if self.idx is not None:
             train_X, train_y = train_X[:,:,self.idx], train_y[:,:,self.idx]
             val_X, val_y = val_X[:,:,self.idx], val_y[:,:,self.idx]
             test_X, test_y = test_X[:,:,self.idx], test_y[:,:,self.idx]
         
-
-        print(f"train_X.shape = {train_X.shape}")
-        
         self.train_dataset = TensorDataset(train_X, train_y)
         self.val_dataset = TensorDataset(val_X, val_y)
         self.test_dataset = TensorDataset(test_X, test_y)
-        print("Data prepered")
         
     def train_dataloader(self):
         return DataLoader(
@@ -155,7 +168,6 @@ class Model(pl.LightningModule):
             )
 
     def on_train_epoch_end(self):
-        print("on_train_epoch_end")
         super().on_train_epoch_end()
         if self.batch_count > 0:
             avg_loss = self.cumulative_loss / self.batch_count
@@ -164,7 +176,6 @@ class Model(pl.LightningModule):
             # Reset accumulators for the next epoch
             self.cumulative_loss = 0.0
             self.batch_count = 0
-        print("on_train_epoch_end2")
             
     def on_validation_epoch_end(self):
         super().on_validation_epoch_end()
@@ -174,14 +185,13 @@ class Model(pl.LightningModule):
 
             self.cumulative_val_loss = 0.0
             self.val_batch_count = 0
-
+    
     def on_test_epoch_end(self):
         super().on_test_epoch_end()
         if self.test_batch_count > 0:
             avg_loss = self.cumulative_test_loss / self.test_batch_count
             self.test_loss.append(avg_loss)
 
-            # Reset accumulators for the next epoch
             self.cumulative_test_loss = 0.0
             self.test_batch_count = 0
             
@@ -202,6 +212,10 @@ class Model(pl.LightningModule):
             'mape': np.mean(mape_values),
             'mase': np.mean(mase_values)
         }
+        
+    def get_predictions(self):
+        # Concatenate predictions across batches
+        return torch.cat(self.predictions, dim=0), torch.cat(self.trues, dim=0)
 
 
 def train_lightning_model(
@@ -211,7 +225,7 @@ def train_lightning_model(
     horizon, 
     num_epochs, 
     blocks,
-    series, 
+    series="", 
     out_txt_name='',
     print_stats=False, 
     thetas_dim=(4,8),
@@ -223,78 +237,98 @@ def train_lightning_model(
     num_of_vars = data_to_num_vars_dict[data]    
     n_series = data_to_num_of_series[data]
     
+    preds_list, trues_list = [], []
     train_metrics_idx, val_metrics_idx, test_metrics_idx = [], [], []
     
-    # for idx in range(num_of_vars):
-    model = Model(
+    for idx in range(num_of_vars):
+        model = Model(
+            lookback=lookback, 
+            horizon=horizon, 
+            num_vars=num_of_vars,
+            nb_blocks_per_stack=blocks,
+            thetas_dim=thetas_dim,
+            data=data, 
+            print_stats=print_stats,
+            n_series=n_series, 
+            series=series,
+            idx=idx,
+            )
+
+        trainer = pl.Trainer(
+            max_epochs=num_epochs, 
+            accelerator='cuda', 
+            devices=torch.cuda.device_count(),
+            log_every_n_steps=32
+        )        
+        
+        trainer.fit(model)
+        trainer.test(model)
+            
+        train_metrics_idx.append(model.compute_metrics(model.train_dataloader()))
+        val_metrics_idx.append(model.compute_metrics(model.val_dataloader()))
+        test_metrics_idx.append(model.compute_metrics(model.test_dataloader()))
+                   
+        predictions, trues = model.get_predictions()
+        preds_list.append(predictions)
+        trues_list.append(trues)
+  
+    final_predictions = torch.cat(preds_list, dim=1)
+    final_trues = torch.cat(trues_list, dim=1)
+
+    print(f"final_predictions = {final_predictions.shape}")
+    print(f"final_trues = {final_trues.shape}")
+    
+    final_predictions_cpu = final_predictions.to('cpu')
+    final_trues = final_trues.to('cpu')
+    mse = torch.mean((final_predictions_cpu - final_trues) ** 2).item()
+
+    def aggregate_metrics(metrics_list):
+        aggregated_metrics = {}
+        for metric in metrics_list[0].keys():
+            aggregated_metrics[metric] = np.mean([m[metric] for m in metrics_list])
+        return aggregated_metrics
+
+    train_metrics = aggregate_metrics(train_metrics_idx)
+    val_metrics = aggregate_metrics(val_metrics_idx)
+    test_metrics = aggregate_metrics(test_metrics_idx)
+
+    print("Aggregated Train Metrics:", train_metrics)
+    print("Aggregated Validation Metrics:", val_metrics)
+    print("Aggregated Test Metrics:", test_metrics)
+    
+    add_results_to_excel(
+        model=model_type, 
+        data=data, 
         lookback=lookback, 
         horizon=horizon, 
-        num_vars=num_of_vars,
-        nb_blocks_per_stack=blocks,
-        thetas_dim=thetas_dim,
-        data=data, 
-        print_stats=print_stats,
-        n_series=n_series, 
-        series=series,
-        idx=0,
+        epochs=num_epochs, 
+        blocks=blocks, 
+        stack_types=None,
+        is_poly=False,
+        num_channels=num_channels,
+        series=series, 
+        train_mse=0, 
+        test_mse=mse, 
+        train_mae=0, 
+        test_mae=0, 
+        train_smape=train_metrics['smape'], 
+        test_smape=test_metrics['smape'], 
+        train_mape=train_metrics['mape'], 
+        test_mape=test_metrics['mape'], 
+        train_mase=train_metrics['mase'], 
+        test_mase=test_metrics['mase'],
+        train_rmsse=0, 
+        test_rmsse=0,
         )
-
-    trainer = pl.Trainer(
-        max_epochs=num_epochs, 
-        accelerator='cuda', 
-        devices=torch.cuda.device_count(),
-        log_every_n_steps=32
-    )
-
-    trainer.fit(model)
-    
-    trainer.test(model)
-            
-        # train_metrics_idx.append(model.compute_metrics(model.train_dataloader()))
-        # val_metrics_idx.append(model.compute_metrics(model.val_dataloader()))
-        # test_metrics_idx.append(model.compute_metrics(model.test_dataloader()))
-        
-        # print(f"test metrics = {train_metrics_idx[-1]}")
-
-    # def aggregate_metrics(metrics_list):
-    #     aggregated_metrics = {}
-    #     for metric in metrics_list[0].keys():
-    #         aggregated_metrics[metric] = np.mean([m[metric] for m in metrics_list])
-    #     return aggregated_metrics
-
-    # train_metrics = aggregate_metrics(train_metrics_idx)
-    # val_metrics = aggregate_metrics(val_metrics_idx)
-    # test_metrics = aggregate_metrics(test_metrics_idx)
-
-    # print("Aggregated Train Metrics:", train_metrics)
-    # print("Aggregated Validation Metrics:", val_metrics)
-    # print("Aggregated Test Metrics:", test_metrics)
-
-    # add_results_to_excel(
-    #     model=model_type, 
-    #     data=data, 
-    #     lookback=lookback, 
-    #     horizon=horizon, 
-    #     epochs=num_epochs, 
-    #     blocks=blocks, 
-    #     series=series, 
-    #     train_mse=model.train_loss[-1], 
-    #     test_mse=model.test_loss[-1], 
-    #     train_smape=train_metrics['smape'], 
-    #     test_smape=test_metrics['smape'], 
-    #     train_mape=train_metrics['mape'], 
-    #     test_mape=test_metrics['mape'], 
-    #     train_mase=train_metrics['mase'], 
-    #     test_mase=test_metrics['mase']
-    #     )
     
     return
 
+
 def main():
     model_type = 'nbeats'
-    data = 'eeg_single'
-    epochs = [1]
-    blocks = 3
+    data = 'etth2'
+    epochs = [3]
+    blocks = 1
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:
@@ -327,8 +361,6 @@ def main():
                     print_stats=False
                 )
         
-
-
 
 if __name__ == "__main__":
     main()

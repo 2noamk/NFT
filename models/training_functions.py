@@ -16,11 +16,12 @@ import os
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def read_all_data_and_print_stats(data_path, print_stats=True):
+def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
 
     def read_pkl_to_torch(file_path, device=None, dtype=None):
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
+        print(data.shape)
         tensor_data = torch.tensor(data, device=device, dtype=dtype)
         return tensor_data
 
@@ -48,6 +49,8 @@ def read_all_data_and_print_stats(data_path, print_stats=True):
         print(f"The mean value in the test is: {torch.mean(test_X).item()}")
         print(f"The median value in the test is: {torch.median(test_X).item()}")
 
+    # if data in ['etth1']:
+        
     train_X = read_pkl_to_torch(data_path + 'train_X.pkl', dtype=torch.float32)
     train_y = read_pkl_to_torch(data_path + 'train_y.pkl', dtype=torch.float32)
     val_X = read_pkl_to_torch(data_path + 'val_X.pkl', dtype=torch.float32)
@@ -70,12 +73,15 @@ def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
     elif data[:4] == 'noaa':
         data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{data[-4:]}_{lookback}l_{horizon}h/'
+    elif data in ['electricity', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
+        data_path = data_path + f"{data}_{lookback}l_{horizon}h_0label/"
     else:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h/"
 
     train_X, train_y, val_X, val_y, test_X, test_y = read_all_data_and_print_stats(
         data_path=data_path,
-        print_stats=print_stats
+        print_stats=print_stats,
+        dataset=data
         )
 
     return  train_X, train_y, val_X, val_y, test_X, test_y
@@ -317,11 +323,27 @@ def calculate_smape(y_true, y_pred):
     :param y_pred: The predicted values
     :return: sMAPE
     """
-    y_true, y_pred = np.array(y_true.cpu()), np.array(y_pred.cpu())
+    
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.cpu().numpy()
+
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
     denominator = (np.abs(y_true) + np.abs(y_pred)) / 2.0
+    
+    # diff = np.abs(y_true - y_pred) / denominator
+    # diff[denominator == 0] = 0.0  # handle the case where the denominator is zero
+    # return 100 * np.mean(diff)
+
+    
+    # Use a small epsilon to avoid division by zero
+    epsilon = 1e-8
+    denominator = np.where(denominator > epsilon, denominator, epsilon)
+    
     diff = np.abs(y_true - y_pred) / denominator
-    diff[denominator == 0] = 0.0  # handle the case where the denominator is zero
     return 100 * np.mean(diff)
+
 
 
 def calculate_mape(y_true, y_pred):
@@ -331,8 +353,15 @@ def calculate_mape(y_true, y_pred):
     :param y_pred: The predicted values
     :return: MAPE
     """
-    y_true, y_pred = np.array(y_true.cpu()), np.array(y_pred.cpu())
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.cpu().numpy()
+        
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
     non_zero_mask = y_true != 0
+    
+    print(y_true[non_zero_mask].shape, y_pred[non_zero_mask].shape)
     return np.mean(np.abs((y_true[non_zero_mask] - y_pred[non_zero_mask]) / 
                         y_true[non_zero_mask])) * 100
 
@@ -344,7 +373,14 @@ def calculate_mase(y_true, y_pred):
     :param y_pred: The predicted values
     :return: MASE
     """
-    y_true, y_pred = np.array(y_true.cpu()), np.array(y_pred.cpu())
+    
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.cpu().numpy()
+        
+        
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
     # Generate y_naive, where each value is the preceding value in y_true
     y_naive = np.roll(y_true, 1)
     y_naive[0] = y_true[0]  # Assuming the first value is the same, or you can exclude it
@@ -356,6 +392,35 @@ def calculate_mase(y_true, y_pred):
 
 def calculate_mae(y_true, y_pred):
     return torch.mean(torch.abs(y_pred - y_true))
+
+
+def calculate_rmsse(y_true, y_pred):
+    """
+    Calculate the Root Mean Squared Scaled Error (RMSSE)
+    :param y_true: The actual values
+    :param y_pred: The predicted values
+    :return: RMSSE
+    """
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.cpu().numpy()
+
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    # Generate y_naive, where each value is the preceding value in y_true
+    y_naive = np.roll(y_true, 1)
+    y_naive[0] = y_true[0]  # Assuming the first value is the same, or you can exclude it
+
+    # Calculating the squared errors for the model predictions and naive predictions
+    squared_error_pred = np.square(y_pred - y_true)
+    squared_error_naive = np.square(y_naive - y_true)
+
+    # Calculating the Mean Squared Errors for predictions and naive benchmark
+    mse_pred = np.mean(squared_error_pred)
+    mse_naive = np.mean(squared_error_naive)
+
+    # Calculating RMSSE
+    return np.sqrt(mse_pred / mse_naive) if mse_naive != 0 else np.inf
 
 
 def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
@@ -414,8 +479,11 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     return train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
 
 
-def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_types, is_poly, num_channels, series, train_mse, test_mse, train_mae, test_mae, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase):
-        
+def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_types, 
+                         is_poly, num_channels, series, train_mse, test_mse, train_mae, 
+                         test_mae, train_smape, test_smape, train_mape, test_mape, 
+                         train_mase, test_mase, train_rmsse, test_rmsse):
+    print("Hi")
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
@@ -425,8 +493,16 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
         data = f"{data}_{series}"
         
     file_path = f"{base_dir}/{model}_{data}_results.xlsx"
+    
+    print(f"file_path = {file_path}")
         
-    if Path(file_path).is_file(): df = pd.read_excel(file_path)
+    if Path(file_path).is_file(): 
+        df = pd.read_excel(file_path)
+        # Check if the new columns exist and add them if they do not
+        if 'train_rmsse' not in df.columns:
+            df['train_rmsse'] = pd.NA
+        if 'test_rmsse' not in df.columns:
+            df['test_rmsse'] = pd.NA
     else: df = pd.DataFrame(columns=[
         "Data", "Lookback", "Horizon", "Epochs", 
         "Stack types", "Blocks", "Is Poly", "num_channels",
@@ -434,7 +510,8 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
         "train_mae", "test_mae", 
         "train_smape", "test_smape", 
         "train_mape", "test_mape", 
-        "train_mase", "test_mase"
+        "train_mase", "test_mase", 
+        "train_rmsse", "test_rmsse"
         ])
     
     if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
@@ -447,7 +524,9 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
                "train_mae": train_mae, "test_mae": test_mae, 
                "train_smape": train_smape, "test_smape": test_smape, 
                "train_mape": train_mape, "test_mape": test_mape, 
-               "train_mase": train_mase, "test_mase": test_mase}
+               "train_mase": train_mase, "test_mase": test_mase, 
+                "train_rmsse": train_rmsse, "test_rmsse": test_rmsse,
+               }
     
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
@@ -483,6 +562,41 @@ def log_to_file(message, file_path):
     with open(file_path, 'a') as file:
         file.write(message + '\n')
 
+def add_num_of_params_to_excel(dataset_name, model, total_params):
+    data = {
+    'Dataset Name': [dataset_name],
+    'Model': [model],
+    'Total Parameters': [total_params]
+    }
+    df = pd.DataFrame(data)
+    
+    file_path = '/home/noam.koren/multiTS/NFT/results/num_of_parameters.xlsx'
+    
+    if os.path.exists(file_path):
+        df_existing = pd.read_excel(file_path)
+        df_final = pd.concat([df_existing, df], ignore_index=True)
+    else:
+        df_final = df
+
+    df_final.to_excel(file_path, index=False)
+
+def add_run_time_to_excel(dataset_name, model, time):
+    data = {
+    'Dataset Name': [dataset_name],
+    'Model': [model],
+    'Time': [time]
+    }
+    df = pd.DataFrame(data)
+    
+    file_path = '/home/noam.koren/multiTS/NFT/results/run_time.xlsx'
+    
+    if os.path.exists(file_path):
+        df_existing = pd.read_excel(file_path)
+        df_final = pd.concat([df_existing, df], ignore_index=True)
+    else:
+        df_final = df
+
+    df_final.to_excel(file_path, index=False)
 
 def print_conclusion_to_txt(
     out_txt_name,

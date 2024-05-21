@@ -251,7 +251,8 @@ class NFT(nn.Module):
                 trend_forecast, trend_thetas, _ = self(x, output_type='trend', return_thetas=True)
                 seasonality_forecast, _, seasonality_thetas = self(x, output_type='seasonality', return_thetas=True)
                 print(f'x: {x.shape}, trend_forecast: {trend_forecast.shape}, trend_thetas: {trend_thetas.shape}')
-                
+                print(f'x: {x.shape}, seasonality_forecast: {seasonality_forecast.shape}, seasonality_thetas: {seasonality_thetas.shape}')
+
             if return_interpretable and return_thetas:
                 return f, trend_forecast, seasonality_forecast, trend_thetas, seasonality_thetas
             elif return_thetas:

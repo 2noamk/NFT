@@ -1,5 +1,6 @@
 import sys
 import torch
+import time
 import numpy as np
 import pytorch_lightning as pl
 import torch.nn.functional as F
@@ -7,11 +8,12 @@ from nbeats_pytorch.model import NBeatsNet
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
+from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list, data_to_label_len
 from lists import noaa_years
-from models.training_functions import get_data, calculate_smape, calculate_mape, calculate_mase, calculate_mae, add_results_to_excel, get_model_name, get_path, save_model
+from models.training_functions import add_run_time_to_excel, calculate_rmsse, add_num_of_params_to_excel, get_data, calculate_smape, calculate_mape, calculate_mase, calculate_mae, add_results_to_excel, get_model_name, get_path, save_model
 from models.NFT.NFT import NFT
 from models.baseline_models.base_models import TCN, TimeSeriesTransformer, LSTM
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 torch.set_float32_matmul_precision('high')
 
@@ -36,8 +38,19 @@ class Model(pl.LightningModule):
         stack_types=('trend', 'seasonality')
         ):
         super(Model, self).__init__()
-        if model == 'nft':
-            print(stack_types)
+        
+        self.model_name = model
+        self.data = data 
+        self.lookback=lookback 
+        self.horizon=horizon
+        self.label_len = data_to_label_len[data]
+        self.num_vars = num_vars
+        self.n_series = n_series
+        self.series = series
+        self.print_stats = print_stats
+        
+
+        if self.model_name == 'nft':
             self.model = NFT(
                 stack_types=stack_types,
                 nb_blocks_per_stack=nb_blocks_per_stack,
@@ -52,54 +65,42 @@ class Model(pl.LightningModule):
                 nb_harmonics=None,
                 is_poly=is_poly,
             )
-        elif model == 'tcn':
+            
+        elif self.model_name == 'tcn':
             self.model = TCN(
             lookback=lookback, 
-            horizon=horizon, 
+            horizon=horizon + self.label_len, 
             num_vars=num_vars, 
             num_channels=num_channels, 
             kernel_size=kernel_size, 
             dropout=dropout
             )
-        elif model == 'transformer':
+        elif self.model_name == 'transformer':
             self.model = TimeSeriesTransformer(
             lookback=lookback, 
-            horizon=horizon, 
+            horizon=horizon + self.label_len, 
             num_vars=num_vars,
             num_layers=1,
             num_heads=1,
             dim_feedforward=16,
             )
-        elif model == 'lstm':
+        elif self.model_name == 'lstm':
             self.model = LSTM(
                 num_vars=num_vars, 
                 lookback=lookback, 
-                horizon=horizon, 
+                horizon=horizon + self.label_len, 
                 hidden_dim=50, 
                 num_layers=2
             )
-        elif model == 'nbeats':
+        elif self.model_name == 'nbeats':
             self.model = NBeatsNet(
                 stack_types=(NBeatsNet.TREND_BLOCK_BLOCK, NBeatsNet.SEASONALITY_BLOCK),
                 nb_blocks_per_stack=2,
                 thetas_dim=(4,8),
-                forecast_length=horizon,
+                forecast_length=horizon + self.label_len,
                 backcast_length=lookback,
                 )
-        elif model == 'patchtst':
-            self.model = PatchTST(
-                n_vars=num_vars,
-                lookback=lookback,
-                horizon=horizon,
-            )
         
-        self.data = data 
-        self.lookback=lookback 
-        self.horizon=horizon 
-        self.num_vars = num_vars
-        self.n_series = n_series
-        self.series = series
-        self.print_stats = print_stats
         
         self.train_loss = []
         self.val_loss = []
@@ -151,6 +152,9 @@ class Model(pl.LightningModule):
         return {'test_loss': loss}
     
     def configure_optimizers(self):
+        total_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        print("Total trainable parameters:", total_params)
+        add_num_of_params_to_excel(dataset_name=self.data, model=self.model_name, total_params=total_params)
         return torch.optim.Adam(self.parameters(), lr=1e-3)
     
     def prepare_data(self):
@@ -164,18 +168,18 @@ class Model(pl.LightningModule):
         )
         
         train_X = train_X.reshape(-1, self.lookback, self.num_vars)
-        train_y = train_y.reshape(-1, self.horizon, self.num_vars)
+        train_y = train_y.reshape(-1, self.horizon + self.label_len, self.num_vars)
         
         val_X = val_X.reshape(-1, self.lookback, self.num_vars)
-        val_y = val_y.reshape(-1, self.horizon, self.num_vars)
+        val_y = val_y.reshape(-1, self.horizon + self.label_len, self.num_vars)
         
         test_X = test_X.reshape(-1, self.lookback, self.num_vars)
-        test_y = test_y.reshape(-1, self.horizon, self.num_vars)
+        test_y = test_y.reshape(-1, self.horizon + self.label_len, self.num_vars)
         
         self.train_dataset = TensorDataset(train_X, train_y)
         self.val_dataset = TensorDataset(val_X, val_y)
         self.test_dataset = TensorDataset(test_X, test_y)
-        
+                
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset, 
@@ -226,7 +230,6 @@ class Model(pl.LightningModule):
             # Reset accumulators for the next epoch
             self.cumulative_test_loss = 0.0
             self.test_batch_count = 0
-
  
     def calculate_mase(y_true, y_pred, seasonal_period=1):
         # Naive forecast (shifted true values by the seasonal period)
@@ -256,6 +259,7 @@ class Model(pl.LightningModule):
         mape = calculate_mape(trues, preds).item()
         smape = calculate_smape(trues, preds).item()
         mase = calculate_mase(trues, preds).item()
+        rmsse = calculate_rmsse(trues, preds).item()
 
         return {
             'mae': mae,
@@ -264,28 +268,9 @@ class Model(pl.LightningModule):
             'mspe': mspe,
             'mape': mape,
             'smape': smape,
-            'mase': mase
+            'mase': mase,
+            'rmsse': rmsse,
         }
-
-            
-    # def compute_metrics(self, dataloader):
-    #     smape_values, mape_values, mase_values, mae_values = [], [], [], []
-    #     for batch in dataloader:
-    #         x, y = batch
-    #         y_hat = self.model.predict(x)
-    #         smape_values.append(calculate_smape(y, y_hat).item())
-    #         mape_values.append(calculate_mape(y, y_hat).item())
-    #         mae_values.append(calculate_mae(y, y_hat).item())
-    #         mase_result = calculate_mase(y, y_hat)
-    #         if torch.is_tensor(mase_result): mase_values.append(mase_result.item())
-    #         else: mase_values.append(mase_result)
-    #     return {
-    #         'smape': np.mean(smape_values),
-    #         'mape': np.mean(mape_values),
-    #         'mase': np.mean(mase_values),
-    #         'mae': np.mean(mae_values)
-
-    #     }
 
 
 def train_lightning_model(
@@ -339,7 +324,16 @@ def train_lightning_model(
         log_every_n_steps=32
     )
 
+    # start_time = time.time()
+
+    # Fit model
     trainer.fit(model)
+
+    # end_time = time.time()
+    
+    # add_run_time_to_excel(dataset_name=data, 
+    #                       model=model_type, 
+    #                       time=end_time-start_time)
     
     trainer.test(model)
           
@@ -367,28 +361,30 @@ def train_lightning_model(
         train_mape=train_metrics['mape'], 
         test_mape=test_metrics['mape'], 
         train_mase=train_metrics['mase'], 
-        test_mase=test_metrics['mase']
+        test_mase=test_metrics['mase'],
+        train_rmsse=train_metrics['rmsse'], 
+        test_rmsse=test_metrics['rmsse'],
         )
     
-    model_name = get_model_name(
-        model_type=model_type, 
-        data=data, 
-        lookback=lookback, 
-        horizon=horizon, 
-        epochs=num_epochs,
-        blocks=blocks,  
-        layers_type='tcn', 
-        n_series=n_series,
-        series=series
-        )
+    # model_name = get_model_name(
+    #     model_type=model_type, 
+    #     data=data, 
+    #     lookback=lookback, 
+    #     horizon=horizon, 
+    #     epochs=num_epochs,
+    #     blocks=blocks,  
+    #     layers_type='tcn', 
+    #     n_series=n_series,
+    #     series=series
+    #     )
     
-    path_to_save_model, _, _, _ = get_path(
-        model_name=model_name, 
-        data=data,
-        model_type=model_type
-    )
+    # path_to_save_model, _, _, _ = get_path(
+    #     model_name=model_name, 
+    #     data=data,
+    #     model_type=model_type
+    # )
     
-    save_model(model, path_to_save_model, model_name)
+    # save_model(model, path_to_save_model, model_name)
     
     return
 
@@ -396,13 +392,14 @@ def train_lightning_model(
 def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
     model_type = 'nft'
-    """Choose dataset: air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'air_quality'
+    models = ['nft']
+    """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
+    data = 'ecg'
     out_txt_name = f"{model_type}_{data}.txt"
-    tcn_channels = [[2,2]] #[[25, 50],[25, 25],[2,2]]
+    tcn_channels = [[25, 50]]
     num_channels = [2,2]
     epochs = [10]
-    blocks_lst = [3] #[2, 3, 4, 5, 6, 7]
+    blocks_lst = [6]
     layers_type = 'tcn'
     is_poly = False
     thetas_dim = (4,8)
@@ -417,72 +414,86 @@ def main():
 
     print(f"data = {data}")
     
-
-    for s in data_to_steps[data]:
-        lookback, horizon = s
-        for num_epochs in epochs:
-            if model_type == 'nft':
-                for blocks in blocks_lst:
-                    for num_channels in tcn_channels:
-                        for stack_types, thetas_dim in stacks:       
-                            if data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
-                                for series in single_data_to_series_list[data]:
-                                    for thetas_dim in [(4, 8), (8, 8), (8, 16)]:
-                                        train_lightning_model(
+    for model_type in models:
+        for s in data_to_steps[data]:
+            lookback, horizon = s
+            for num_epochs in epochs:
+                if model_type == 'nft':
+                    for blocks in blocks_lst:
+                        for num_channels in tcn_channels:
+                            for stack_types, thetas_dim in stacks:       
+                                if data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
+                                    for series in single_data_to_series_list[data]:
+                                        for thetas_dim in [(4, 8), (8, 8), (8, 16)]:
+                                            train_lightning_model(
+                                                model_type=model_type,
+                                                data=data,
+                                                lookback=lookback,
+                                                horizon=horizon,
+                                                num_epochs=num_epochs,
+                                                blocks=blocks if model_type=='nft' else 0,
+                                                out_txt_name=out_txt_name,
+                                                print_stats=False,
+                                                series=series,
+                                                thetas_dim=thetas_dim,
+                                                layers_type=layers_type,
+                                                num_channels=num_channels,
+                                                is_poly=is_poly
+                                        )
+                                elif data == 'noaa_years':
+                                    for series in single_data_to_series_list[data[0:4]]:
+                                        for year in noaa_years:
+                                            train_lightning_model(
+                                                model_type=model_type,
+                                                data=data,
+                                                lookback=lookback,
+                                                horizon=horizon,
+                                                num_epochs=num_epochs,
+                                                blocks=blocks if model_type=='nft' else 0,
+                                                out_txt_name=out_txt_name,
+                                                print_stats=False,
+                                                series=series,
+                                                thetas_dim=thetas_dim,
+                                                layers_type=layers_type,
+                                                num_channels=num_channels,
+                                                is_poly=is_poly,
+                                                year=year,
+                                        )
+                                else: 
+                                    train_lightning_model(
                                             model_type=model_type,
                                             data=data,
                                             lookback=lookback,
                                             horizon=horizon,
                                             num_epochs=num_epochs,
-                                            blocks=blocks if model_type=='nft' else 0,
+                                            blocks=blocks,
                                             out_txt_name=out_txt_name,
-                                            print_stats=False,
-                                            series=series,
+                                            print_stats=True,
+                                            series=None,
                                             thetas_dim=thetas_dim,
-                                            layers_type=layers_type,
-                                            num_channels=num_channels,
-                                            is_poly=is_poly
-                                    )
-                            elif data == 'noaa_years':
-                                for series in single_data_to_series_list[data[0:4]]:
-                                    for year in noaa_years:
-                                        train_lightning_model(
-                                            model_type=model_type,
-                                            data=data,
-                                            lookback=lookback,
-                                            horizon=horizon,
-                                            num_epochs=num_epochs,
-                                            blocks=blocks if model_type=='nft' else 0,
-                                            out_txt_name=out_txt_name,
-                                            print_stats=False,
-                                            series=series,
-                                            thetas_dim=thetas_dim,
+                                            stack_types=stack_types,
                                             layers_type=layers_type,
                                             num_channels=num_channels,
                                             is_poly=is_poly,
-                                            year=year,
-                                    )
-                            else: 
-                                train_lightning_model(
-                                        model_type=model_type,
-                                        data=data,
-                                        lookback=lookback,
-                                        horizon=horizon,
-                                        num_epochs=num_epochs,
-                                        blocks=blocks,
-                                        out_txt_name=out_txt_name,
-                                        print_stats=False,
-                                        series=None,
-                                        thetas_dim=thetas_dim,
-                                        stack_types=stack_types,
-                                        layers_type=layers_type,
-                                        num_channels=num_channels,
-                                        is_poly=is_poly
-                                        )
-                                                   
-            else: 
-                if data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
-                    for series in single_data_to_series_list[data]:
+                                            )
+                                                    
+                else: 
+                    if data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
+                        for series in single_data_to_series_list[data]:
+                            train_lightning_model(
+                                model_type=model_type,
+                                data=data,
+                                lookback=lookback,
+                                horizon=horizon,
+                                num_epochs=num_epochs,
+                                blocks=num_channels,
+                                out_txt_name=out_txt_name,
+                                print_stats=False,
+                                series=series,
+                                layers_type=layers_type,
+                                num_channels=num_channels,
+                            )
+                    else:
                         train_lightning_model(
                             model_type=model_type,
                             data=data,
@@ -492,24 +503,10 @@ def main():
                             blocks=num_channels,
                             out_txt_name=out_txt_name,
                             print_stats=False,
-                            series=series,
+                            series=None,
                             layers_type=layers_type,
                             num_channels=num_channels,
                         )
-                else:
-                    train_lightning_model(
-                        model_type=model_type,
-                        data=data,
-                        lookback=lookback,
-                        horizon=horizon,
-                        num_epochs=num_epochs,
-                        blocks=num_channels,
-                        out_txt_name=out_txt_name,
-                        print_stats=False,
-                        series=None,
-                        layers_type=layers_type,
-                        num_channels=num_channels,
-                    )
 
 
 if __name__ == "__main__":
