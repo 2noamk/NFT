@@ -42,7 +42,7 @@ def process_data(data, lookback, horizon, with_date=True):
         X_test_standardized.shape, y_test_standardized.shape,
         )
 
-    if data in ['ecg', 'eeg']:
+    if data in ['ecg', 'eeg', 'eeg_3_lead']:
         save_to_pkl(
             path + f"{data}_{lookback}l_{horizon}h_{n_series}series/",
             X_train_standardized, y_train_standardized, 

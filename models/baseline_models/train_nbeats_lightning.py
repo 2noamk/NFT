@@ -240,6 +240,8 @@ def train_lightning_model(
     preds_list, trues_list = [], []
     train_metrics_idx, val_metrics_idx, test_metrics_idx = [], [], []
     
+    start_time = time.time()
+
     for idx in range(num_of_vars):
         model = Model(
             lookback=lookback, 
@@ -271,7 +273,13 @@ def train_lightning_model(
         predictions, trues = model.get_predictions()
         preds_list.append(predictions)
         trues_list.append(trues)
-  
+    
+    end_time = time.time()
+    
+    add_run_time_to_excel(dataset_name=data, 
+                          model=model_type, 
+                          time=end_time-start_time)
+    
     final_predictions = torch.cat(preds_list, dim=1)
     final_trues = torch.cat(trues_list, dim=1)
 
@@ -326,9 +334,9 @@ def train_lightning_model(
 
 def main():
     model_type = 'nbeats'
-    data = 'etth2'
-    epochs = [3]
-    blocks = 1
+    data = 'ecg'
+    epochs = [1]
+    blocks = 2
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:

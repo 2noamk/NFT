@@ -182,7 +182,7 @@ class Model(pl.LightningModule):
     def configure_optimizers(self):
         total_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print("Total trainable parameters:", total_params)
-        add_num_of_params_to_excel(dataset_name=self.data, model=self.model_name, total_params=total_params)
+        # add_num_of_params_to_excel(dataset_name=self.data, model=self.model_name, total_params=total_params)
         return torch.optim.Adam(self.parameters(), lr=1e-3)
     
     def prepare_data(self):
@@ -331,16 +331,15 @@ def train_lightning_model(
         log_every_n_steps=32
     )
 
-    # start_time = time.time()
-
+    start_time = time.time()
     # Fit model
     trainer.fit(model)
 
-    # end_time = time.time()
+    end_time = time.time()
     
-    # add_run_time_to_excel(dataset_name=data, 
-    #                       model=model_type, 
-    #                       time=end_time-start_time)
+    add_run_time_to_excel(dataset_name=data, 
+                          model=model_type, 
+                          time=end_time-start_time)
     
     trainer.test(model)
           
@@ -401,12 +400,12 @@ def main():
     model_type = 'nft'
     models = ['nft', 'tcn']
     """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'ettm2'
+    data = 'traffic'
     out_txt_name = f"{model_type}_{data}.txt"
-    tcn_channels = [[25, 50],[25, 25]]
+    tcn_channels = [[25, 50]]
     num_channels = [2,2]
-    epochs = [10]
-    blocks_lst = [2, 3, 4]
+    epochs = [1]
+    blocks_lst = [2]
     layers_type = 'tcn'
     is_poly = False
     thetas_dim = (4,8)
@@ -429,7 +428,7 @@ def main():
                     for blocks in blocks_lst:
                         for num_channels in tcn_channels:
                             for stack_types, thetas_dim in stacks:       
-                                if data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
+                                if data in ['eeg_single', 'ecg_single', 'noaa']:
                                     for series in single_data_to_series_list[data]:
                                         for thetas_dim in [(4, 8), (8, 8), (8, 16)]:
                                             train_lightning_model(

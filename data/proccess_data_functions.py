@@ -52,6 +52,7 @@ def data_to_raw_data_path(data, series=None, year=None):
         'noaa_year': lambda: f'{base_path}noaa/noaa_ghcn/years/embedded/{series}/{series}_{year}.pkl',
         'ecg': lambda: f'{base_path}ecg/pkl_files', 
         'eeg': lambda: f'{base_path}eeg/eval_normal_pkl',
+        'eeg_3_lead': lambda: f'{base_path}eeg/eval_normal_pkl',
         'chorales': lambda: f'{base_path}chorales/chorales_pkl', 
         'cabs': lambda: f'{base_path}cabs/cabs_150_pkl',
         'electricity': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
@@ -74,7 +75,7 @@ def data_to_raw_data_path(data, series=None, year=None):
     
     # Fetch the appropriate path using the dictionary, or use the default if no matching key
     df_path = path_mappings.get(data, lambda: default_path)()
-
+    print(df_path)
     return df_path
 
     
@@ -93,7 +94,7 @@ def get_df_without_outliers(path, n_cols=None):
     if path.endswith('.pkl'):  df = pd.read_pickle(path)
     elif path.endswith('.csv'):  df = pd.read_csv(path)
     else: raise ValueError("Unsupported file type. Please use a .csv or .pkl file.")
-    if n_cols: df = df.iloc[:, 0:3]
+    if n_cols: df = df.iloc[:, 0:n_cols]
     return remove_outliers(df)
 
 

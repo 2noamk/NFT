@@ -117,13 +117,19 @@ class Model(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self(x)
+        y_hat = self(x)        
+        if isinstance(y_hat, tuple):
+            y_hat = y_hat[0] 
+        if isinstance(y, tuple):
+            y = y[0]
         loss = F.mse_loss(y_hat, y)
         self.log('test_loss', loss, prog_bar=True, sync_dist=True)
    
         # Update accumulators
         self.cumulative_test_loss += loss.item()
         self.test_batch_count += 1
+        self.predictions.append(y_hat.detach())
+        self.trues.append(y.detach())
 
         return {'test_loss': loss}
     
@@ -138,6 +144,11 @@ class Model(pl.LightningModule):
         val_y = pd.read_pickle(f'{base_path}val_y.pkl')
         test_X = pd.read_pickle(f'{base_path}test_X.pkl')
         test_y = pd.read_pickle(f'{base_path}test_y.pkl')
+        
+        if self.idx is not None:
+            train_X, train_y = train_X[:,self.idx], train_y[:,self.idx]
+            val_X, val_y = val_X[:,self.idx], val_y[:,self.idx]
+            test_X, test_y = test_X[:,self.idx], test_y[:,self.idx]
         
         # Convert data to tensors
         self.train_dataset = CustomDataset(train_X, train_y, self.lookback, self.label_len, self.horizon)
@@ -228,6 +239,8 @@ def train_lightning_model(
     preds_list, trues_list = [], []
     train_metrics_idx, val_metrics_idx, test_metrics_idx = [], [], []
     
+    start_time = time.time()
+
     for idx in range(num_of_vars):
         model = Model(
             lookback=lookback, 
@@ -249,7 +262,7 @@ def train_lightning_model(
             log_every_n_steps=32
         )        
         
-        trainer.fit(model)
+        trainer.fit(model)        
         trainer.test(model)
             
         train_metrics_idx.append(model.compute_metrics(model.train_dataloader()))
@@ -260,6 +273,12 @@ def train_lightning_model(
         preds_list.append(predictions)
         trues_list.append(trues)
   
+    end_time = time.time()
+    
+    add_run_time_to_excel(dataset_name=data, 
+                          model=model_type, 
+                          time=end_time-start_time)
+    
     final_predictions = torch.cat(preds_list, dim=1)
     final_trues = torch.cat(trues_list, dim=1)
 
@@ -314,9 +333,9 @@ def train_lightning_model(
 
 def main():
     model_type = 'nbeats'
-    data = 'etth1'
-    epochs = [5]
-    blocks = 1
+    data = 'etth2'
+    epochs = [1]
+    blocks = 2
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:

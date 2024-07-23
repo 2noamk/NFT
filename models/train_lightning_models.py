@@ -324,16 +324,16 @@ def train_lightning_model(
         log_every_n_steps=32
     )
 
-    # start_time = time.time()
+    start_time = time.time()
 
     # Fit model
     trainer.fit(model)
 
-    # end_time = time.time()
+    end_time = time.time()
     
-    # add_run_time_to_excel(dataset_name=data, 
-    #                       model=model_type, 
-    #                       time=end_time-start_time)
+    add_run_time_to_excel(dataset_name=data, 
+                          model=model_type, 
+                          time=end_time-start_time)
     
     trainer.test(model)
           
@@ -391,10 +391,10 @@ def train_lightning_model(
 
 def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
-    model_type = 'nft'
+    model_type = 'tcn'
     models = ['nft']
     """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'ecg'
+    data = 'illness'
     out_txt_name = f"{model_type}_{data}.txt"
     tcn_channels = [[25, 50]]
     num_channels = [2,2]

@@ -157,13 +157,20 @@ def train(
     add_results_to_excel(
         model='nbeats', 
         data=data, 
+        is_poly=False,
+        num_channels=None,
+        stack_types=None,
         lookback=lookback, 
         horizon=horizon, 
         epochs=epochs, 
         blocks=blocks, 
         series=series, 
         train_mse=0, 
-        test_mse=mse, 
+        test_mse=mse,  
+        train_mae=0, 
+        test_mae=0,   
+        train_rmsse=0, 
+        test_rmsse=0, 
         train_smape=0, 
         test_smape=smape, 
         train_mape=0, 
@@ -174,9 +181,9 @@ def train(
     
   
 def main():
-    data = 'air_quality'
-    epochs = [10]
-    blocks = 4
+    data = 'ecg'
+    epochs = [1]
+    blocks = 2
     print(f"data = {data}")
     
     if data in ['eeg_single', 'ecg_single', 'noaa']:
