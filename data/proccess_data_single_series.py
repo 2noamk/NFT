@@ -1,8 +1,7 @@
 import sys
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_num_vars_dict, data_to_steps, single_data_to_series_list, data_to_label_len
-from lists import noaa_years
+from dicts import data_to_steps, single_data_to_series_list, data_to_label_len, noaa_series_to_years
 from data.proccess_data_functions import data_to_raw_data_path, get_df_without_outliers, impute_data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
@@ -25,7 +24,7 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
         test_df=test_data, 
         lookback=lookback, 
         horizon=horizon,
-        label_len=data_to_label_len[data],
+        label_len=data_to_label_len.get(data, 0),
         with_date=True
         )
            
@@ -76,7 +75,21 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
 
 
 def main():
-    data = 'electricity'
+    data = 'noaa_years'
+    if data == 'seasonal_trend_test':
+         for seasonal_amplitude in [4, 5, 6, 7, 8]:#[0.05, 0.1, 0.15, 0.2]:
+            for trend_amplitude in [0.2]:#[30, 40, 50, 60]:
+                data = f'seasonal_{seasonal_amplitude}_trend_{trend_amplitude}'
+                for step in data_to_steps['seasonal_trend_0_5']:
+                    lookback, horizon = step
+                    if lookback==150 and horizon ==50: break
+                    process_data(
+                        data=data,
+                        lookback=lookback, 
+                        horizon=horizon,
+                        series=None,
+                        with_date=True
+                    )  
     if data in ['noaa', 'eeg_single', 'ecg_single', 'ett']:
         for series in single_data_to_series_list[data]:
             for step in data_to_steps[data]:
@@ -89,18 +102,16 @@ def main():
                     with_date=True
                 )
     elif data == 'noaa_years':
-        for step in data_to_steps[data]:
-            for series in  single_data_to_series_list[data[0:4]]:
-                lookback, horizon = step
-                for year in noaa_years:
+        for lookback, horizon in data_to_steps[data]:
+            for series in single_data_to_series_list[data]:
+                for year in noaa_series_to_years[series]:
                     process_data(
                         data=f'noaa_{series}_{year}',
                         lookback=lookback, 
                         horizon=horizon,
                         series=series,
                         year=year
-                    )  
-     
+                    )       
     else:
         for step in data_to_steps[data]:
             lookback, horizon = step

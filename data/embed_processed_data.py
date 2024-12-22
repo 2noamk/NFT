@@ -8,8 +8,12 @@ import pandas as pd
 import numpy as np
 import pickle
 import torch
+import sys
 import os
 
+
+sys.path.append('/home/noam.koren/multiTS/NFT/')
+from dicts import data_to_steps
 class dataset(Dataset):
     def __init__(self, X, y, lookback, horizon, label_len=0, data_stamp=None):
         self.seq_len = lookback
@@ -29,13 +33,13 @@ class dataset(Dataset):
             r_end = r_begin + self.label_len + self.pred_len
 
             seq_x =X[s_begin:s_end]
-            seq_y = y[r_begin:r_end]
-            seq_x_mark = data_stamp[s_begin:s_end]
-            seq_y_mark = data_stamp[r_begin:r_end]
-            
+            seq_y = y[r_begin:r_end]            
             self.X.append(seq_x)
             self.y.append(seq_y)
+            
             if self.add_date:
+                seq_x_mark = data_stamp[s_begin:s_end]
+                seq_y_mark = data_stamp[r_begin:r_end]
                 self.X_mark.append(seq_x_mark)
                 self.y_mark.append(seq_y_mark)
 
@@ -53,59 +57,62 @@ class dataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def embed_data(data='traffic', lookback=96, label_len=0, horizons=[1, 16, 32, 48], add_data_stamp=False):
+def embed_data(data='traffic', lookback=96, label_len=0, horizons=1, add_data_stamp=False):
     base_path = f'/home/noam.koren/multiTS/NFT/data/{data}/' 
 
-    for horizon in horizons:
-        for flag in ['train', 'val', 'test']:
-            X = torch.tensor(pd.read_pickle(f'{base_path}{flag}_X.pkl'))
-            y = torch.tensor(pd.read_pickle(f'{base_path}{flag}_y.pkl'))
+    for flag in ['train', 'val', 'test']:
+        X = torch.tensor(pd.read_pickle(f'{base_path}{flag}_X.pkl'))
+        y = torch.tensor(pd.read_pickle(f'{base_path}{flag}_y.pkl'))
+        if add_data_stamp:
             data_stamp = torch.tensor(pd.read_pickle(f'{base_path}{flag}_data_stamp.pkl'))
-            
-            d = dataset(
-                X=X, 
-                y=y, 
-                lookback=lookback, 
-                horizon=horizon, 
-                label_len=label_len, 
-                data_stamp=data_stamp
-            )
-            
-            path = f'{base_path}{data}_{lookback}l_{horizon}h_{label_len}label/'
-            if add_data_stamp: mark_path = f'{base_path}{data}_date_stamp_{lookback}l_{horizon}h_{label_len}label/'
+        else:
+            data_stamp = None
+        
+        d = dataset(
+            X=X, 
+            y=y, 
+            lookback=lookback, 
+            horizon=horizon, 
+            label_len=label_len, 
+            data_stamp=data_stamp
+        )
+        
+        path = f'{base_path}{data}_{lookback}l_{horizon}h_{label_len}label/'
+        if add_data_stamp: mark_path = f'{base_path}{data}_date_stamp_{lookback}l_{horizon}h_{label_len}label/'
 
-            # Check if directories exist, create if not
-            if not os.path.exists(path):
-                os.makedirs(path)
-            if add_data_stamp and not os.path.exists(mark_path):
-                os.makedirs(mark_path)
+        # Check if directories exist, create if not
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if add_data_stamp and not os.path.exists(mark_path):
+            os.makedirs(mark_path)
 
 
-            # Convert tensor to a NumPy array if it's on GPU, you might need to call .cpu() before .numpy()
-            X_np = d.X.cpu().numpy() if d.X.is_cuda else d.X.numpy()
-            y_np = d.y.cpu().numpy() if d.y.is_cuda else d.y.numpy()
+        # Convert tensor to a NumPy array if it's on GPU, you might need to call .cpu() before .numpy()
+        X_np = d.X.cpu().numpy() if d.X.is_cuda else d.X.numpy()
+        y_np = d.y.cpu().numpy() if d.y.is_cuda else d.y.numpy()
 
-            # Save using pandas.to_pickle
-            pd.to_pickle(X_np, f'{path}/{flag}_X.pkl')
-            pd.to_pickle(y_np, f'{path}/{flag}_y.pkl')
+        # Save using pandas.to_pickle
+        pd.to_pickle(X_np, f'{path}/{flag}_X.pkl')
+        pd.to_pickle(y_np, f'{path}/{flag}_y.pkl')
 
-            # For the date_stamp tensor, do the same if it's a tensor
-            if add_data_stamp:
-                if isinstance(d.X_mark, torch.Tensor):
-                    X_mark_np = d.X_mark.cpu().numpy() if d.X_mark.is_cuda else d.X_mark.numpy()
-                    pd.to_pickle(X_mark_np, f'{mark_path}/{flag}_X.pkl')
-                    y_mark_np = d.y_mark.cpu().numpy() if d.y_mark.is_cuda else d.y_mark.numpy()
-                    pd.to_pickle(y_mark_np, f'{mark_path}/{flag}_y.pkl')
-                else:
-                    pd.to_pickle(d.X_mark, f'{mark_path}/{flag}_X.pkl')
-                    pd.to_pickle(d.y_mark, f'{mark_path}/{flag}_y.pkl')
+        # For the date_stamp tensor, do the same if it's a tensor
+        if add_data_stamp:
+            if isinstance(d.X_mark, torch.Tensor):
+                X_mark_np = d.X_mark.cpu().numpy() if d.X_mark.is_cuda else d.X_mark.numpy()
+                pd.to_pickle(X_mark_np, f'{mark_path}/{flag}_X.pkl')
+                y_mark_np = d.y_mark.cpu().numpy() if d.y_mark.is_cuda else d.y_mark.numpy()
+                pd.to_pickle(y_mark_np, f'{mark_path}/{flag}_y.pkl')
+            else:
+                pd.to_pickle(d.X_mark, f'{mark_path}/{flag}_X.pkl')
+                pd.to_pickle(d.y_mark, f'{mark_path}/{flag}_y.pkl')
 
 
 if __name__ == "__main__":
-    for data in ['exchange']:
-        embed_data(
-            data=data, 
-            lookback=96, 
-            label_len=0, 
-            horizons=[720],
-            add_data_stamp=False)      
+    for data in ['illness']:
+        for lookback, horizon in data_to_steps[data]:
+            embed_data(
+                data=data, 
+                lookback=lookback, 
+                label_len=0, 
+                horizons=horizon,
+                add_data_stamp=False)      

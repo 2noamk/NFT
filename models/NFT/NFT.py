@@ -136,7 +136,7 @@ class NFT(nn.Module):
         self._loss = loss_
 
     def fit(self, x_train, y_train, validation_data=None, epochs=10, batch_size=16, plot_epoch=10, 
-            path_to_save_model=None, path_to_save_loss_plots=None, path_to_save_prediction_plots=None):
+            path_to_save_model=None, path_to_save_loss_plots=None, path_to_save_prediction_plots=None, dft_1d=False):
 
         def split(arr, size):
             arrays = []
@@ -182,7 +182,7 @@ class NFT(nn.Module):
             for batch_id in shuffled_indices:
                 batch_x, batch_y = x_train_list[batch_id], y_train_list[batch_id]
                 self._opt.zero_grad()
-                forecast = self(batch_x.clone().detach())
+                forecast = self(batch_x.clone().detach(), dft_1d=dft_1d)
                 loss = self._loss(forecast, batch_y.clone().detach())
                 total_loss_sum += loss.item() * len(batch_x)
                 total_data_points += len(batch_x)
@@ -273,7 +273,7 @@ class NFT(nn.Module):
         outputs = {o['layer']: o['value'][0] for o in self._intermediary_outputs}
         return g_pred, i_pred, outputs
 
-    def forward(self, backcast, output_type='all', return_thetas=False):
+    def forward(self, backcast, output_type='all', return_thetas=False, dft_1d=False):
         if backcast.dim() == 2:
             self._single_series = True
             backcast = backcast.unsqueeze(-1)
@@ -292,8 +292,12 @@ class NFT(nn.Module):
                     (output_type == 'seasonality' and block_type == 'SeasonalityBlock')):
 
 
-                    if return_thetas: b, f, theta_f = block(backcast, return_thetas)
-                    else: b, f = block(backcast, return_thetas)
+                    if return_thetas:
+                        if block_type == 'SeasonalityBlock': b, f, theta_f = block(backcast, return_thetas, dft_1d)
+                        else: b, f, theta_f = block(backcast, return_thetas)
+                    else: 
+                        if block_type == 'SeasonalityBlock': b, f = block(backcast, return_thetas, dft_1d)
+                        else: b, f = block(backcast, return_thetas)
                     
                     backcast = backcast - b  
                     forecast = forecast.to(f.device) + f
@@ -317,7 +321,7 @@ class NFT(nn.Module):
             return forecast
 
 
-def seasonality_model(thetas, len_series_linespace, n_vars_linespace):
+def seasonality_model(thetas, len_series_linespace, n_vars_linespace, dft_1d=False):
     """
     thetas: is of size (batch_size, n_vars, thetas_dim)s
     len_series_linespace: linespace of length: series_len
@@ -341,10 +345,13 @@ def seasonality_model(thetas, len_series_linespace, n_vars_linespace):
     M2 = create_fourier_mat(thetas_dim, len_series_linespace).unsqueeze(0).expand(batch_size, -1, -1)
 
     if thetas.is_cuda:
-        M2 = M2.to(thetas.device)
         M1 = M1.to(thetas.device)
+        M2 = M2.to(thetas.device)
 
     intermediate = torch.bmm(thetas, M2) # shape: (batch_size, n_vars, series_len)
+    if dft_1d: 
+        return intermediate.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
+    
     result = torch.bmm(M1, intermediate) # shape: (batch_size, n_vars, series_len)
     result = result.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
     return result
@@ -468,7 +475,7 @@ class SeasonalityBlock(Block):
             super(SeasonalityBlock, self).__init__(units, thetas_dim, layers_type, n_vars, backcast_length,
                                                    forecast_length, num_channels_for_tcn, share_thetas=True)
 
-    def forward(self, x, return_thetas=False):
+    def forward(self, x, return_thetas=False, dft_1d=False):
         """
         x is of size (batch_size, series_len, n_vars)
         return:
@@ -486,8 +493,8 @@ class SeasonalityBlock(Block):
             backcast_thetas = self.theta_b_fc(x).reshape(batch_size, self.n_vars, self.thetas_dim) 
             forecast_thetas = self.theta_f_fc(x).reshape(batch_size, self.n_vars, self.thetas_dim)
 
-        backcast = seasonality_model(backcast_thetas, self.backcast_linspace, self.vars_linespace)
-        forecast = seasonality_model(forecast_thetas, self.forecast_linspace, self.vars_linespace)
+        backcast = seasonality_model(backcast_thetas, self.backcast_linspace, self.vars_linespace, dft_1d)
+        forecast = seasonality_model(forecast_thetas, self.forecast_linspace, self.vars_linespace, dft_1d)
 
         if return_thetas: return backcast, forecast, forecast_thetas
         return backcast, forecast

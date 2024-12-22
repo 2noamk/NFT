@@ -64,6 +64,7 @@ def data_to_raw_data_path(data, series=None, year=None):
         'illness': lambda: f'{base_path}autoformer_datasets/{data}/national_illness.csv',
         'traffic': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
         'weather':lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
+        'seasonality': lambda: f'{base_path}seasonality/seasonality.pkl', 
     }
 
     # Check if the 'data' key starts with 'noaa' and the year is specified

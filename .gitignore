@@ -11,7 +11,10 @@
 *.json
 *.pdf
 *.npy
+*.yaml
+/home/noam.koren/multiTS/NFT/models/baseline_models/TEMPO/*
 /home/noam.koren/multiTS/NFT/models/baseline_models/Time-Series-Library/*
+/home/noam.koren/multiTS/NFT/models/baseline_models/TSLANet/*
 lightning_logs/*
 lightning_logs/version_0/events.out.tfevents.1705231227.newton3.544530.0
 lightning_logs/version_1/events.out.tfevents.1705594272.newton3.1633459.0

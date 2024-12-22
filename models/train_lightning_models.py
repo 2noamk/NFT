@@ -27,7 +27,7 @@ class Model(pl.LightningModule):
         nb_blocks_per_stack=2,
         thetas_dim=(4, 8),
         layers_type='tcn',
-        num_channels=[25, 50], 
+        num_channels=num_of_vars, 
         kernel_size=2, 
         dropout=0.2,
         data='noaa', 
@@ -392,9 +392,9 @@ def train_lightning_model(
 def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
     model_type = 'tcn'
-    models = ['nft']
+    models = ['tcn']
     """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'illness'
+    data = 'seasonality'
     out_txt_name = f"{model_type}_{data}.txt"
     tcn_channels = [[25, 50]]
     num_channels = [2,2]

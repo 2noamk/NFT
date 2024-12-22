@@ -147,6 +147,7 @@ def train(
         mse_lst.append(test_mse.item() if isinstance(test_mse, torch.Tensor) else test_mse)
         mase_lst.append(test_mase.item() if isinstance(test_mase, torch.Tensor) else test_mase)
         smape_lst.append(test_smape.item() if isinstance(test_smape, torch.Tensor) else test_smape)
+        
 
     mse = np.mean(mse_lst)
     smape = np.mean(smape_lst)
@@ -181,7 +182,7 @@ def train(
     
   
 def main():
-    data = 'ecg'
+    data = 'illness'
     epochs = [1]
     blocks = 2
     print(f"data = {data}")

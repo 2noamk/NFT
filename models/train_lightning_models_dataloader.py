@@ -186,7 +186,7 @@ class Model(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
     
     def prepare_data(self):
-        base_path = f'/home/noam.koren/multiTS/NFT/data/{self.data}/'
+        base_path = f'/home/noam.koren/multiTS/NFT/data/{self.data}/{self.data}_{self.lookback}l_{self.horizon}h/'
         train_X = pd.read_pickle(f'{base_path}train_X.pkl')
         train_y = pd.read_pickle(f'{base_path}train_y.pkl')
         val_X = pd.read_pickle(f'{base_path}val_X.pkl')
@@ -397,10 +397,10 @@ def train_lightning_model(
 
 def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
-    model_type = 'nft'
-    models = ['nft', 'tcn']
+    model_type = 'tcn'
+    models = ['tcn']
     """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'traffic'
+    data = 'seasonality'
     out_txt_name = f"{model_type}_{data}.txt"
     tcn_channels = [[25, 50]]
     num_channels = [2,2]

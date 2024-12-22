@@ -64,7 +64,7 @@ def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
     return train_X, train_y, val_X, val_y, test_X, test_y
 
 
-def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):    
+def get_data(data, lookback, horizon, n_series, series=None, year=None, print_stats=True):    
     data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
 
     if data in ['ecg', 'eeg', 'eeg_3_lead']:
@@ -72,8 +72,8 @@ def get_data(data, lookback, horizon, n_series, series=None, print_stats=True):
     elif data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
     elif data[:4] == 'noaa':
-        data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{data[-4:]}_{lookback}l_{horizon}h/'
-    elif data in ['electricity', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
+        data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
+    elif data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_0label/"
     else:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h/"
@@ -391,7 +391,7 @@ def calculate_mase(y_true, y_pred):
 
 
 def calculate_mae(y_true, y_pred):
-    return torch.mean(torch.abs(y_pred - y_true))
+    return torch.mean(torch.abs(y_pred - y_true)).item()
 
 
 def calculate_rmsse(y_true, y_pred):
@@ -425,14 +425,20 @@ def calculate_rmsse(y_true, y_pred):
 
 def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     def print_evaluation(train_mse, val_mse, test_mse,
-                        train_smape, val_smape, test_smape, 
-                        train_mape, val_mape, test_mape,
-                        train_mase, val_mase, test_mase):
+                     train_mae, val_mae, test_mae,
+                     train_smape, val_smape, test_smape, 
+                     train_mape, val_mape, test_mape,
+                     train_mase, val_mase, test_mase):
                                     
         print(f"MSE:\n"
         f"train MSE = {train_mse}\n"
         f"val MSE = {val_mse}\n"
-        f"test MSE = {test_mse}\n")
+        f"test MSE = {test_mse}\n")  
+                                       
+        print(f"MAE:\n"
+        f"train MAE = {train_mae}\n"
+        f"val MAE = {val_mae}\n"
+        f"test MAE = {test_mae}\n")
         
         print(f"sMAPE:\n"
         f"train sMAPE = {train_smape}\n"
@@ -458,6 +464,10 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     train_mse = F.mse_loss(train_pred.to(device), train_y.to(device))
     val_mse = F.mse_loss(val_pred.to(device), val_y.to(device))
     test_mse = F.mse_loss(test_pred.to(device), test_y.to(device))
+    
+    train_mae = calculate_mae(train_pred, train_y)
+    val_mae = calculate_mae(val_pred, val_y)
+    test_mae = calculate_mae(test_pred, test_y)
 
     train_smape = calculate_smape(train_pred, train_y)
     val_smape = calculate_smape(val_pred, val_y)
@@ -472,17 +482,18 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
     test_mase = calculate_mase(test_pred, test_y)
     
     print_evaluation(train_mse, val_mse, test_mse,
+                     train_mae, val_mae, test_mae,
                      train_smape, val_smape, test_smape, 
                      train_mape, val_mape, test_mape,
                      train_mase, val_mase, test_mase)
     
-    return train_pred, val_pred, test_pred, train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
+    return train_pred, val_pred, test_pred, train_mse, test_mse, train_mae, test_mae, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
 
 
-def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_types, 
-                         is_poly, num_channels, series, train_mse, test_mse, train_mae, 
-                         test_mae, train_smape, test_smape, train_mape, test_mape, 
-                         train_mase, test_mase, train_rmsse, test_rmsse):
+def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0, stack_types=None, 
+                         fourier_granularity=0, poly_degree=0, num_channels=0, series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
+                         test_mae=0, train_smape=0, test_smape=0, train_mape=0, test_mape=0, 
+                         train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0):
     print("Hi")
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
@@ -490,7 +501,7 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
         os.makedirs(base_dir)
 
     if series is not None:
-        data = f"{data}_{series}"
+        data = f"{data}_{series}_{year}"
         
     file_path = f"{base_dir}/{model}_{data}_results.xlsx"
     
@@ -503,9 +514,15 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
             df['train_rmsse'] = pd.NA
         if 'test_rmsse' not in df.columns:
             df['test_rmsse'] = pd.NA
+        if 'fourier granularity' not in df.columns:
+            df['fourier granularity'] = pd.NA
+        if 'poly degree' not in df.columns:
+            df['poly degree'] = pd.NA
     else: df = pd.DataFrame(columns=[
         "Data", "Lookback", "Horizon", "Epochs", 
-        "Stack types", "Blocks", "Is Poly", "num_channels",
+        "Stack types", "Blocks", 
+        "fourier granularity", "poly degree",
+        "num_channels",
         "train_mse", "test_mse", 
         "train_mae", "test_mae", 
         "train_smape", "test_smape", 
@@ -519,7 +536,10 @@ def add_results_to_excel(model, data, lookback, horizon, epochs, blocks, stack_t
         
     new_row = {"Data": data, "Lookback": lookback, "Horizon": horizon, 
                "Epochs": epochs, "Stack types": stack_types,
-               "Blocks": blocks, "Is Poly": is_poly, "num_channels": num_channels,
+               "Blocks": blocks, 
+               "fourier granularity": fourier_granularity, 
+               "poly degree": poly_degree, 
+               "num_channels": num_channels,
                "train_mse": train_mse, "test_mse": test_mse,  
                "train_mae": train_mae, "test_mae": test_mae, 
                "train_smape": train_smape, "test_smape": test_smape, 
