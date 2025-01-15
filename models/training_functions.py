@@ -4,6 +4,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 from torch.utils.data import DataLoader
 from pathlib import Path
 from torch import nn
+from torch.utils.data import Dataset
 
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
@@ -12,8 +13,57 @@ import numpy as np
 import pickle
 import torch
 import os
+import sys
+sys.path.append('/home/noam.koren/multiTS/NFT/')
+from dicts import data_to_label_len
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+class dataset(Dataset):
+    def __init__(self, data_X, data_y, lookback, horizon, label_len=0, data_stamp=None):
+        self.seq_len = lookback
+        self.horizon = horizon
+        self.label_len = label_len
+        self.X = []
+        self.y = []
+
+        for i in range(self.seq_len, data_X.shape[0] - self.horizon):              
+            self.X.append(torch.tensor(data_X[i - self.seq_len:i], dtype=torch.float32))
+            self.y.append(torch.tensor(data_y[i - self.label_len:i + self.horizon], dtype=torch.float32))
+            
+        self.X = torch.stack(self.X)
+        self.y = torch.stack(self.y)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
+
+
+def print_stats_func(train_X, train_y, val_X, val_y, test_X, test_y):
+    print(f"shape of:\n"
+    f"train: X {train_X.shape}, y: {train_y.shape}\n"
+    f"val: X {val_X.shape}, y: {val_y.shape}\n"
+    f"test: X {test_X.shape}, y: {test_y.shape}")
+    print()
+
+    print(f"The highest value in train is: {torch.max(train_X).item()}")
+    print(f"The lowest value in the train is: {torch.min(train_X).item()}")
+    print(f"The mean value in the train is: {torch.mean(train_X).item()}")
+    print(f"The median value in the train is: {torch.median(train_X).item()}")
+    print()
+
+    print(f"The highest value in val is: {torch.max(val_X).item()}")
+    print(f"The lowest value in the val is: {torch.min(val_X).item()}")
+    print(f"The mean value in the val is: {torch.mean(val_X).item()}")
+    print(f"The median value in the val is: {torch.median(val_X).item()}")
+    print()
+
+    print(f"The highest value in test is: {torch.max(test_X).item()}")
+    print(f"The lowest value in test train is: {torch.min(test_X).item()}")
+    print(f"The mean value in the test is: {torch.mean(test_X).item()}")
+    print(f"The median value in the test is: {torch.median(test_X).item()}")
 
 
 def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
@@ -25,29 +75,6 @@ def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
         tensor_data = torch.tensor(data, device=device, dtype=dtype)
         return tensor_data
 
-    def print_stats_func(train_X, train_y, val_X, val_y, test_X, test_y):
-        print(f"shape of:\n"
-        f"train: X {train_X.shape}, y: {train_y.shape}\n"
-        f"val: X {val_X.shape}, y: {val_y.shape}\n"
-        f"test: X {test_X.shape}, y: {test_y.shape}")
-        print()
-
-        print(f"The highest value in train is: {torch.max(train_X).item()}")
-        print(f"The lowest value in the train is: {torch.min(train_X).item()}")
-        print(f"The mean value in the train is: {torch.mean(train_X).item()}")
-        print(f"The median value in the train is: {torch.median(train_X).item()}")
-        print()
-
-        print(f"The highest value in val is: {torch.max(val_X).item()}")
-        print(f"The lowest value in the val is: {torch.min(val_X).item()}")
-        print(f"The mean value in the val is: {torch.mean(val_X).item()}")
-        print(f"The median value in the val is: {torch.median(val_X).item()}")
-        print()
-
-        print(f"The highest value in test is: {torch.max(test_X).item()}")
-        print(f"The lowest value in test train is: {torch.min(test_X).item()}")
-        print(f"The mean value in the test is: {torch.mean(test_X).item()}")
-        print(f"The median value in the test is: {torch.median(test_X).item()}")
 
     # if data in ['etth1']:
         
@@ -64,8 +91,50 @@ def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
     return train_X, train_y, val_X, val_y, test_X, test_y
 
 
+def process_data(data, lookback, horizon):
+    path = f"/home/noam.koren/multiTS/NFT/data/{data}/"
+    
+    train_X = pd.read_pickle(path + 'train_X.pkl')
+    train_y = pd.read_pickle(path + 'train_y.pkl')
+    val_X = pd.read_pickle(path + 'val_X.pkl')
+    val_y = pd.read_pickle(path + 'val_y.pkl')
+    test_X = pd.read_pickle(path + 'test_X.pkl')
+    test_y = pd.read_pickle(path + 'test_y.pkl')
+
+    label_len = data_to_label_len[data]
+
+    train_dataset = dataset(data_X=train_X,
+                            data_y=train_y,
+                            lookback=lookback,
+                            horizon=horizon, 
+                            label_len=label_len
+                            )
+    val_dataset = dataset(data_X=val_X,
+                            data_y=val_y, 
+                            lookback=lookback, 
+                            horizon=horizon, 
+                            label_len=label_len
+                            )
+    test_dataset = dataset(data_X=test_X,
+                            data_y=test_y, 
+                            lookback=lookback, 
+                            horizon=horizon, 
+                            label_len=label_len
+                            )
+    print_stats_func(
+      train_dataset.X, train_dataset.y,
+           val_dataset.X, val_dataset.y,
+           test_dataset.X, test_dataset.y  
+    )
+    return train_dataset.X, train_dataset.y,val_dataset.X, val_dataset.y, test_dataset.X, test_dataset.y
+
+
 def get_data(data, lookback, horizon, n_series, series=None, year=None, print_stats=True):    
     data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
+
+    if data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
+        print('new!!!')
+        return process_data(data, lookback, horizon)
 
     if data in ['ecg', 'eeg', 'eeg_3_lead']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_{n_series}series/"
@@ -75,6 +144,10 @@ def get_data(data, lookback, horizon, n_series, series=None, year=None, print_st
         data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
     elif data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_0label/"
+    elif data in ['mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
+        data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
+    elif data[:9] == "seasonal_":
+        data_path = f"/home/noam.koren/multiTS/NFT/data/generated/{data}/{data}_{lookback}l_{horizon}h/"
     else:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h/"
 
@@ -494,7 +567,6 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
                          fourier_granularity=0, poly_degree=0, num_channels=0, series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
                          test_mae=0, train_smape=0, test_smape=0, train_mape=0, test_mape=0, 
                          train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0):
-    print("Hi")
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
@@ -534,7 +606,7 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
     if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
     if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
         
-    new_row = {"Data": data, "Lookback": lookback, "Horizon": horizon, 
+    new_row = {"Data": f'{data}', "Lookback": lookback, "Horizon": horizon, 
                "Epochs": epochs, "Stack types": stack_types,
                "Blocks": blocks, 
                "fourier granularity": fourier_granularity, 

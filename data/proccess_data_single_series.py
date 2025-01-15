@@ -1,14 +1,14 @@
 import sys
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_steps, single_data_to_series_list, data_to_label_len, noaa_series_to_years
-from data.proccess_data_functions import data_to_raw_data_path, get_df_without_outliers, impute_data, standardize_data, get_datasets, save_to_pkl, plot_data
+from dicts import data_to_steps, single_data_to_series_list, data_to_label_len, noaa_series_to_years, mini_electricity_list, melody_list
+from data.proccess_data_functions import remove_outliers, data_to_raw_data_path, get_df, impute_data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
 def process_data(data, lookback, horizon, series=None, year=None, with_date=True):
     path = f"/home/noam.koren/multiTS/NFT/data/"
     
-    df = get_df_without_outliers(data_to_raw_data_path(data, series, year))
+    df = remove_outliers(get_df(data_to_raw_data_path(data, series, year)))
     n = len(df)
     train_size, val_size, test_size = int(0.5*n), int(0.2*n), int(0.3*n)
     
@@ -74,8 +74,10 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
     # plot_data(y_test_standardized, horizon, num_of_vars)
 
 
+
+
 def main():
-    data = 'noaa_years'
+    data = 'eeg_single'
     if data == 'seasonal_trend_test':
          for seasonal_amplitude in [4, 5, 6, 7, 8]:#[0.05, 0.1, 0.15, 0.2]:
             for trend_amplitude in [0.2]:#[30, 40, 50, 60]:

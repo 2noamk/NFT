@@ -1,45 +1,8 @@
-
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-n_variables=5
-n_timesteps=1000
-
-def create_seasonality_series(n_variables=n_variables, n_timesteps=n_timesteps, seasonality_period=50, noise_level=0.1, save_data=False):
-        
-    # Create time vector
-    time = np.arange(n_timesteps)
-
-    # Generate synthetic multivariate time series data
-    data = np.zeros((n_timesteps, n_variables))
-    for i in range(n_variables):
-        # Add high seasonality with different phases and amplitudes
-        amplitude = np.random.uniform(0.5, 1.5)
-        phase = np.random.uniform(0, 2 * np.pi)
-        data[:, i] = amplitude * np.sin(2 * np.pi * time / seasonality_period + phase)
-
-        # Add some noise
-        data[:, i] += np.random.normal(0, noise_level, n_timesteps)
-
-    # Convert to a pandas DataFrame for visualization and manipulation
-    columns = [f"Variable_{i+1}" for i in range(n_variables)]
-    synthetic_data = pd.DataFrame(data, columns=columns)
-
-    # Plot the generated time series data
-    synthetic_data.plot(figsize=(12, 6))
-    plt.title("Synthetic Multivariate Time Series with High Seasonality")
-    plt.xlabel("Time")
-    plt.ylabel("Values")
-    plt.grid()
-    plt.show()
-
-    if save_data:
-        directory = '/home/noam.koren/multiTS/NFT/data/seasonality/'
-        file_path = os.path.join(directory, 'seasonality.pkl')
-        os.makedirs(directory, exist_ok=True)
-        synthetic_data.to_pickle(file_path)
 
 def save_to_excel(df, file_path):
     # Ensure the file path ends with .xlsx
@@ -69,6 +32,7 @@ def process_component_info(seasonality_trend_info, series_name):
     averages_row = {col: averages[col] if col in averages.index else None for col in component_info.columns}
     averages_row['Series_Name'] = series_name
     averages_row['Series'] = 'Average'
+    averages_row['Seasonality_Precetage'] = averages_row['Seasonality_Dominance'] / (averages_row['Seasonality_Dominance']  + averages_row['Trend_Dominance'])
     averages_df = pd.DataFrame([averages_row])
 
     component_info = pd.concat([component_info, averages_df], ignore_index=True)
@@ -76,10 +40,10 @@ def process_component_info(seasonality_trend_info, series_name):
     cols = ['Series_Name'] + [col for col in component_info.columns if col != 'Series_Name']
     component_info = component_info[cols]
 
-    print("Component Info with Averages:")
-    print(component_info.head(6))
+    print("Averaged Component Info:")
+    print(averages_df[cols].head(6))
 
-    return component_info
+    return component_info, averages_df[cols]
 
 def create_time_series(
     num_series, 
@@ -90,7 +54,7 @@ def create_time_series(
     save_data=False,
     series_name=None,
     compute_components=True  # parameter to compute seasonality and trend proportions
-):
+    ):
     time = np.arange(num_points)
     data = {}
     seasonality_trend_info = []
@@ -149,15 +113,84 @@ def create_time_series(
         synthetic_data.to_pickle(file_path)
         
         save_to_excel(component_info, '/home/noam.koren/multiTS/NFT/models/tests/analyse_data/data_components.xlsx')
+
+def get_components(y):
     
-for seasonal_amplitude in [0.01, 0.05, 0.1, 0.15, 0.2]:
-    for trend_amplitude in [30, 40, 50, 60]:
-        create_time_series(
-            num_series=n_variables, 
-            num_points=n_timesteps,
-            trend_amplitude=trend_amplitude, 
-            noise_level=0.1, 
-            seasonal_amplitude=seasonal_amplitude,
-            save_data=True,
-            series_name=f'seasonal_{seasonal_amplitude}_trend_{trend_amplitude}'
-            )
+    # Step 2: Apply Fast Fourier Transform (FFT)
+    n = len(y)  # Length of the signal
+    fft_vals = np.fft.fft(y)  # FFT
+    frequencies = np.fft.fftfreq(n)  # Frequency bins
+
+    # Step 3: Identify dominant frequencies (filtering)
+    # Sort by the magnitude of the FFT values and retain top frequencies
+    magnitude = np.abs(fft_vals)
+    threshold = 0.05 * max(magnitude)  # Keep frequencies with > 5% of max amplitude
+    filtered_fft_vals = fft_vals.copy()
+    filtered_fft_vals[magnitude < threshold] = 0  # Zero out low-amplitude components
+
+    # Step 4: Reconstruct the seasonality using Inverse FFT (IFFT)
+    seasonality = np.fft.ifft(filtered_fft_vals).real
+    
+    # Step 5: Filter out high frequencies (low-pass filter)
+    # Define a cutoff frequency: retain only the low frequencies
+    cutoff = 0.05  # Adjust this value based on your data (0 < cutoff < 1)
+    filtered_fft_vals = fft_vals.copy()
+    filtered_fft_vals[np.abs(frequencies) > cutoff] = 0  # Zero out high-frequency components
+
+    # Step 4: Reconstruct the trend using Inverse FFT (IFFT)
+    trend = np.fft.ifft(filtered_fft_vals).real
+    
+    noise = y - seasonality - trend
+    
+    return seasonality, trend, noise
+ 
+def plot_componentes(y, seasonality, trend, noise):
+    plt.figure(figsize=(12, 6))
+    plt.plot(y, label='Original Series', color='blue')
+    plt.plot(seasonality, label='Extracted Seasonality', color='red')
+    plt.plot(trend, label='Extracted Trend', color='orange')
+    plt.plot(noise, label='Extracted Noise', color='green')
+    plt.title('Components Extraction using Fourier Transform')
+    plt.legend()
+    plt.show()
+ 
+def calculate_components_dominance(data, data_name, save_excel=False, average=True):
+    seasonality_trend_info = []
+    for column in data.columns:
+        y = data[column]
+            
+        seasonal, trend, noise = get_components(y)
+
+        total_variance = y.var()
+        seasonal_variance = seasonal.var()
+        trend_variance = trend.var()
+        noise_variance = noise.var()
+
+        seasonality_dominance = max(0, 1 - (noise_variance / (noise_variance + seasonal_variance)))
+        trend_dominance = max(0, 1 - (noise_variance / (noise_variance + trend_variance)))
+        seasonality_precetage = seasonality_dominance / (seasonality_dominance + trend_dominance) if (seasonality_dominance + trend_dominance) != 0 else 0
+        
+        print(seasonality_dominance, trend_dominance, seasonality_precetage)
+        
+        seasonality_trend_info.append({
+            'Series': column,
+            'Seasonality_Dominance': seasonality_dominance,
+            'Trend_Dominance': trend_dominance,
+            'Seasonality_Precetage': seasonality_precetage,
+            'total_variance': total_variance,
+            'seasonal_variance': seasonal_variance,
+            'trend_variance': trend_variance,
+            'noise_variance': noise_variance,
+            })
+        
+    component_info, averages_df = process_component_info(seasonality_trend_info, series_name=data_name)
+    d = averages_df if average else component_info
+    if save_excel:
+        save_to_excel(d, f'/home/noam.koren/multiTS/NFT/models/tests/analyse_data/{data_name}_components.xlsx')
+
+    return component_info, averages_df
+
+
+
+data = pd.read_pickle('/home/noam.koren/multiTS/NFT/data/air_quality/air_quality.pkl')
+component_info, averages_df = calculate_components_dominance(data, data_name='air_quality', save_excel=True, average=False)

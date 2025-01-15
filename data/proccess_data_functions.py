@@ -54,8 +54,10 @@ def data_to_raw_data_path(data, series=None, year=None):
         'eeg': lambda: f'{base_path}eeg/eval_normal_pkl',
         'eeg_3_lead': lambda: f'{base_path}eeg/eval_normal_pkl',
         'chorales': lambda: f'{base_path}chorales/chorales_pkl', 
+        'melodies': lambda: f'{base_path}chorales/chorales_pkl/{series}.pkl', 
         'cabs': lambda: f'{base_path}cabs/cabs_150_pkl',
         'electricity': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
+        'mini_electricity': lambda: f'{base_path}mini_electricity/{series}.pkl', 
         'etth1': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTh1.csv',
         'etth2': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTh2.csv',
         'ettm1': lambda: f'{base_path}autoformer_datasets/ETT-small/ETTm1.csv',
@@ -65,6 +67,8 @@ def data_to_raw_data_path(data, series=None, year=None):
         'traffic': lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
         'weather':lambda: f'{base_path}autoformer_datasets/{data}/{data}.csv',
         'seasonality': lambda: f'{base_path}seasonality/seasonality.pkl', 
+        'air_quality_seasonal': lambda: f'{base_path}air_quality_seasonal/{series}.pkl', 
+        'air_quality_seasonal_2_var': lambda: f'{base_path}air_quality_seasonal_2_var/{series}.pkl',
     }
 
     # Check if the 'data' key starts with 'noaa' and the year is specified
@@ -90,13 +94,13 @@ def remove_outliers(df):
     return df_out
 
 
-def get_df_without_outliers(path, n_cols=None):
+def get_df(path, n_cols=None):
     # Determine the file extension and read the file accordingly
     if path.endswith('.pkl'):  df = pd.read_pickle(path)
     elif path.endswith('.csv'):  df = pd.read_csv(path)
     else: raise ValueError("Unsupported file type. Please use a .csv or .pkl file.")
     if n_cols: df = df.iloc[:, 0:n_cols]
-    return remove_outliers(df)
+    return df
 
 
 def impute_data(train_df, val_df, test_df):

@@ -34,7 +34,8 @@ class NFT(nn.Module):
             hidden_layer_units=256,
             nb_harmonics=None,
             n_vars=1,
-            is_poly=False
+            is_poly=False,
+            dft_1d=False
     ):
         super(NFT, self).__init__()
         self.forecast_length = forecast_length
@@ -50,6 +51,7 @@ class NFT(nn.Module):
         self.layers_type = layers_type
         self.num_channels_for_tcn = num_channels_for_tcn
         self.is_poly = is_poly
+        self.dft_1d = dft_1d
         self.parameters = []
         print('| NFT')
         for stack_id in range(len(self.stack_types)):
@@ -136,7 +138,7 @@ class NFT(nn.Module):
         self._loss = loss_
 
     def fit(self, x_train, y_train, validation_data=None, epochs=10, batch_size=16, plot_epoch=10, 
-            path_to_save_model=None, path_to_save_loss_plots=None, path_to_save_prediction_plots=None, dft_1d=False):
+            path_to_save_model=None, path_to_save_loss_plots=None, path_to_save_prediction_plots=None):
 
         def split(arr, size):
             arrays = []
@@ -152,7 +154,7 @@ class NFT(nn.Module):
 
         if validation_data is not None:
             x_val = validation_data[0].reshape(-1, self.backcast_length, self.n_vars)
-            y_val = validation_data[1].reshape(-1, self.forecast_length, self.n_vars)        
+            y_val = validation_data[1].reshape(-1, self.forecast_length, self.n_vars)  
 
         if path_to_save_model is not None and not os.path.exists(path_to_save_model):
             os.makedirs(path_to_save_model)
@@ -182,7 +184,7 @@ class NFT(nn.Module):
             for batch_id in shuffled_indices:
                 batch_x, batch_y = x_train_list[batch_id], y_train_list[batch_id]
                 self._opt.zero_grad()
-                forecast = self(batch_x.clone().detach(), dft_1d=dft_1d)
+                forecast = self(batch_x.clone().detach())
                 loss = self._loss(forecast, batch_y.clone().detach())
                 total_loss_sum += loss.item() * len(batch_x)
                 total_data_points += len(batch_x)
@@ -273,7 +275,7 @@ class NFT(nn.Module):
         outputs = {o['layer']: o['value'][0] for o in self._intermediary_outputs}
         return g_pred, i_pred, outputs
 
-    def forward(self, backcast, output_type='all', return_thetas=False, dft_1d=False):
+    def forward(self, backcast, output_type='all', return_thetas=False):
         if backcast.dim() == 2:
             self._single_series = True
             backcast = backcast.unsqueeze(-1)
@@ -293,10 +295,10 @@ class NFT(nn.Module):
 
 
                     if return_thetas:
-                        if block_type == 'SeasonalityBlock': b, f, theta_f = block(backcast, return_thetas, dft_1d)
+                        if block_type == 'SeasonalityBlock': b, f, theta_f = block(backcast, return_thetas, self.dft_1d)
                         else: b, f, theta_f = block(backcast, return_thetas)
                     else: 
-                        if block_type == 'SeasonalityBlock': b, f = block(backcast, return_thetas, dft_1d)
+                        if block_type == 'SeasonalityBlock': b, f = block(backcast, return_thetas, self.dft_1d)
                         else: b, f = block(backcast, return_thetas)
                     
                     backcast = backcast - b  
@@ -349,9 +351,11 @@ def seasonality_model(thetas, len_series_linespace, n_vars_linespace, dft_1d=Fal
         M2 = M2.to(thetas.device)
 
     intermediate = torch.bmm(thetas, M2) # shape: (batch_size, n_vars, series_len)
-    if dft_1d: 
+    if dft_1d:
+        print('usinf 1ddft') 
         return intermediate.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
     
+    # print('usinf 2ddft') 
     result = torch.bmm(M1, intermediate) # shape: (batch_size, n_vars, series_len)
     result = result.permute(0, 2, 1)  # shape: (batch_size, series_len, n_vars)
     return result
