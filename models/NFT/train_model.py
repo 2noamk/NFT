@@ -152,22 +152,59 @@ def main(
 
 
 if __name__ == "__main__":
-    for i in range(5):
-        data = 'chorales'
-        print(f'data={data}')
-        poly_degree,fourier_granularity = 8,4
-        stacks = ('trend', 'seasonality')
-        num_blocks=data_to_num_nft_blocks.get(data, 2)
-        dft_1d=False
-        layers_type='tcn'
-        
-        if data == 'seasonal_trend_test':
-            for seasonal_amplitude in [0.05, 0.1, 0.15, 0.2]:
-                for trend_amplitude in [30, 40, 50, 60]:
-                    data = f'seasonal_{seasonal_amplitude}_trend_{trend_amplitude}'
-                    for lookback, horizon in data_to_steps['seasonal_trend_0_5']:
-                        if lookback==150 and horizon ==50: break      
+    data = 'chorales'
+    print(f'data={data}')
+    poly_degree,fourier_granularity = 8,4
+    stacks = ('trend', 'seasonality')
+    num_blocks=data_to_num_nft_blocks.get(data, 2)
+    dft_1d=False
+    layers_type='tcn'
+    
+    if data == 'seasonal_trend_test':
+        for seasonal_amplitude in [0.05, 0.1, 0.15, 0.2]:
+            for trend_amplitude in [30, 40, 50, 60]:
+                data = f'seasonal_{seasonal_amplitude}_trend_{trend_amplitude}'
+                for lookback, horizon in data_to_steps['seasonal_trend_0_5']:
+                    if lookback==150 and horizon ==50: break      
+                    main(
+                        data=data,
+                        lookback=lookback,
+                        horizon=horizon,
+                        num_epochs=10,
+                        plot_epoch=100,
+                        blocks=num_blocks,
+                        layers_type=layers_type,
+                        batch_size=32,
+                        series=None,#'E00001', # "AEM00041194" #"AG000060590"
+                        stack_types=stacks,
+                        thetas_dim=(poly_degree, fourier_granularity),
+                        get_forecast_and_coeffs=False,
+                        dft_1d=False
+                    )
+    else:
+        for lookback, horizon in data_to_steps[data]:
+            if data == 'noaa_years':
+                for series in single_data_to_series_list[data]:
+                    for year in noaa_series_to_years[series]:
                         main(
+                                data=data,
+                                lookback=lookback,
+                                horizon=horizon,
+                                num_epochs=10,
+                                plot_epoch=100,
+                                blocks=data_to_num_nft_blocks[data],
+                                layers_type=layers_type,
+                                batch_size=32,
+                                series=series,
+                                year=year,
+                                stack_types=stacks,
+                                thetas_dim=(poly_degree, fourier_granularity),
+                                get_forecast_and_coeffs=False,
+                                dft_1d=False
+                            )
+            elif data in ['eeg_single', 'ecg_single', 'noaa', 'mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
+                for series in single_data_to_series_list[data]:
+                    main(
                             data=data,
                             lookback=lookback,
                             horizon=horizon,
@@ -176,65 +213,27 @@ if __name__ == "__main__":
                             blocks=num_blocks,
                             layers_type=layers_type,
                             batch_size=32,
-                            series=None,#'E00001', # "AEM00041194" #"AG000060590"
+                            series=series,
+                            year=None,
                             stack_types=stacks,
                             thetas_dim=(poly_degree, fourier_granularity),
                             get_forecast_and_coeffs=False,
-                            dft_1d=False
+                            dft_1d=dft_1d
                         )
-        else:
-            for lookback, horizon in data_to_steps[data]:
-                if data == 'noaa_years':
-                    for series in single_data_to_series_list[data]:
-                        for year in noaa_series_to_years[series]:
-                            main(
-                                    data=data,
-                                    lookback=lookback,
-                                    horizon=horizon,
-                                    num_epochs=10,
-                                    plot_epoch=100,
-                                    blocks=data_to_num_nft_blocks[data],
-                                    layers_type=layers_type,
-                                    batch_size=32,
-                                    series=series,
-                                    year=year,
-                                    stack_types=stacks,
-                                    thetas_dim=(poly_degree, fourier_granularity),
-                                    get_forecast_and_coeffs=False,
-                                    dft_1d=False
-                                )
-                elif data in ['eeg_single', 'ecg_single', 'noaa', 'mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
-                    for series in single_data_to_series_list[data]:
-                        main(
-                                data=data,
-                                lookback=lookback,
-                                horizon=horizon,
-                                num_epochs=10,
-                                plot_epoch=100,
-                                blocks=num_blocks,
-                                layers_type=layers_type,
-                                batch_size=32,
-                                series=series,
-                                year=None,
-                                stack_types=stacks,
-                                thetas_dim=(poly_degree, fourier_granularity),
-                                get_forecast_and_coeffs=False,
-                                dft_1d=False
-                            )
-                else:
-                    main(
-                    data=data,
-                    lookback=lookback,
-                    horizon=horizon,
-                    num_epochs=10,
-                    plot_epoch=100,
-                    blocks=num_blocks,
-                    layers_type=layers_type,
-                    batch_size=32,
-                    series=None,#None,#'E00001', # "AEM00041194" #"AG000060590"
-                    year=None,
-                    stack_types=stacks,
-                    thetas_dim=(poly_degree, fourier_granularity),
-                    get_forecast_and_coeffs=False,
-                    dft_1d=dft_1d
-                    )
+            else:
+                main(
+                data=data,
+                lookback=lookback,
+                horizon=horizon,
+                num_epochs=10,
+                plot_epoch=100,
+                blocks=num_blocks,
+                layers_type=layers_type,
+                batch_size=32,
+                series=None,#None,#'E00001', # "AEM00041194" #"AG000060590"
+                year=None,
+                stack_types=stacks,
+                thetas_dim=(poly_degree, fourier_granularity),
+                get_forecast_and_coeffs=False,
+                dft_1d=dft_1d
+                )
