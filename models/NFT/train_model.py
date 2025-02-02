@@ -2,6 +2,7 @@
 import torch
 import time
 import sys
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -73,7 +74,8 @@ def main(
         thetas_dim=(4, 8),
         stack_types=('trend', 'seasonality'),
         get_forecast_and_coeffs=False,
-        dft_1d=False
+        dft_1d=False,
+        save_predictions=True
     ):
     
     num_of_vars=data_to_num_vars_dict.get(data, 5) 
@@ -134,24 +136,31 @@ def main(
     # add_results_to_excel("nft", data, lookback, horizon, num_epochs, blocks, series, 
                         #  train_mse, test_mse, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase)
     
+    # Calculate the standard deviation
+    std_dev = torch.std(test_pred.to(device) - test_y.to(device)).item()
     add_results_to_excel('nft', data, lookback, horizon, num_epochs, blocks, stack_types, 
                          fourier_granularity=thetas_dim[1], poly_degree=thetas_dim[0], 
                          num_channels=[25, 50], series=series, year=year, train_mse=train_mse, test_mse=test_mse, 
                          train_mae=train_mae, test_mae=test_mae, train_smape=train_smape, test_smape=test_smape, train_mape=train_mape,
-                         test_mape=test_mape, train_mase=train_mase, test_mase=test_mase, train_rmsse=None, test_rmsse=None)
+                         test_mape=test_mape, train_mase=train_mase, test_mase=test_mase, train_rmsse=None, test_rmsse=None, std=std_dev)
+    
+    
+
     
     # save_model(model, path_to_save_model, model_name)
     # print(f"path_to_save_model={path_to_save_model}, model_name={model_name}")
 
 
 if __name__ == "__main__":
-    data = 'exchange'
-    print(f'data={data}')
-    poly_degree,fourier_granularity = 4,8
-    stacks = ('trend', 'seasonality')
-    dft_1d=False
-    
-    for stacks in [('trend', 'seasonality'), ('seasonality', 'seasonality'), ('trend', 'trend')]: 
+    for i in range(5):
+        data = 'chorales'
+        print(f'data={data}')
+        poly_degree,fourier_granularity = 8,4
+        stacks = ('trend', 'seasonality')
+        num_blocks=data_to_num_nft_blocks.get(data, 2)
+        dft_1d=False
+        layers_type='tcn'
+        
         if data == 'seasonal_trend_test':
             for seasonal_amplitude in [0.05, 0.1, 0.15, 0.2]:
                 for trend_amplitude in [30, 40, 50, 60]:
@@ -164,8 +173,8 @@ if __name__ == "__main__":
                             horizon=horizon,
                             num_epochs=10,
                             plot_epoch=100,
-                            blocks=data_to_num_nft_blocks.get(data, 2),
-                            layers_type='tcn',
+                            blocks=num_blocks,
+                            layers_type=layers_type,
                             batch_size=32,
                             series=None,#'E00001', # "AEM00041194" #"AG000060590"
                             stack_types=stacks,
@@ -185,7 +194,7 @@ if __name__ == "__main__":
                                     num_epochs=10,
                                     plot_epoch=100,
                                     blocks=data_to_num_nft_blocks[data],
-                                    layers_type='tcn',
+                                    layers_type=layers_type,
                                     batch_size=32,
                                     series=series,
                                     year=year,
@@ -202,8 +211,8 @@ if __name__ == "__main__":
                                 horizon=horizon,
                                 num_epochs=10,
                                 plot_epoch=100,
-                                blocks=data_to_num_nft_blocks[data],
-                                layers_type='tcn',
+                                blocks=num_blocks,
+                                layers_type=layers_type,
                                 batch_size=32,
                                 series=series,
                                 year=None,
@@ -219,8 +228,8 @@ if __name__ == "__main__":
                     horizon=horizon,
                     num_epochs=10,
                     plot_epoch=100,
-                    blocks=data_to_num_nft_blocks[data],
-                    layers_type='tcn',
+                    blocks=num_blocks,
+                    layers_type=layers_type,
                     batch_size=32,
                     series=None,#None,#'E00001', # "AEM00041194" #"AG000060590"
                     year=None,
@@ -229,43 +238,3 @@ if __name__ == "__main__":
                     get_forecast_and_coeffs=False,
                     dft_1d=dft_1d
                     )
-
-    dft_1d=True
-    for lookback, horizon in data_to_steps[data]:
-        if data in ['eeg_single', 'ecg_single', 'noaa', 'mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
-            for series in single_data_to_series_list[data]:
-                main(
-                        data=data,
-                        lookback=lookback,
-                        horizon=horizon,
-                        num_epochs=10,
-                        plot_epoch=100,
-                        blocks=data_to_num_nft_blocks[data],
-                        layers_type='tcn',
-                        batch_size=32,
-                        series=series,
-                        year=None,
-                        stack_types=stacks,
-                        thetas_dim=(poly_degree, fourier_granularity),
-                        get_forecast_and_coeffs=False,
-                        dft_1d=False
-                    )
-        else:
-            main(
-                data=data,
-                lookback=lookback,
-                horizon=horizon,
-                num_epochs=10,
-                plot_epoch=100,
-                blocks=data_to_num_nft_blocks[data],
-                layers_type='tcn',
-                batch_size=32,
-                series=None,#None,#'E00001', # "AEM00041194" #"AG000060590"
-                year=None,
-                stack_types=('trend', 'seasonality'),
-                thetas_dim=(poly_degree, fourier_granularity),
-                get_forecast_and_coeffs=False,
-                dft_1d=dft_1d
-            )
-            
-            

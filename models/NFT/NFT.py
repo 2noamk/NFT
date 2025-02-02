@@ -28,7 +28,7 @@ class NFT(nn.Module):
             forecast_length=5,
             backcast_length=10,
             thetas_dim=(4, 8),
-            layers_type='fc',
+            layers_type='tcn',
             num_channels_for_tcn=[25, 50],
             share_weights_in_stack=False,
             hidden_layer_units=256,

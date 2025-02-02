@@ -15,7 +15,7 @@ import torch
 import os
 import sys
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_label_len
+from dicts import data_to_label_len 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -66,12 +66,12 @@ def print_stats_func(train_X, train_y, val_X, val_y, test_X, test_y):
     print(f"The median value in the test is: {torch.median(test_X).item()}")
 
 
-def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
+def read_all_data_and_print_stats(data_path, dataset=None, print_stats=False):
 
     def read_pkl_to_torch(file_path, device=None, dtype=None):
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
-        print(data.shape)
+        # print(data.shape)
         tensor_data = torch.tensor(data, device=device, dtype=dtype)
         return tensor_data
 
@@ -91,7 +91,7 @@ def read_all_data_and_print_stats(data_path, dataset=None, print_stats=True):
     return train_X, train_y, val_X, val_y, test_X, test_y
 
 
-def process_data(data, lookback, horizon):
+def process_data(data, lookback, horizon, print_stats=False):
     path = f"/home/noam.koren/multiTS/NFT/data/{data}/"
     
     train_X = pd.read_pickle(path + 'train_X.pkl')
@@ -121,20 +121,22 @@ def process_data(data, lookback, horizon):
                             horizon=horizon, 
                             label_len=label_len
                             )
-    print_stats_func(
-      train_dataset.X, train_dataset.y,
-           val_dataset.X, val_dataset.y,
-           test_dataset.X, test_dataset.y  
-    )
+    
+    
+    if print_stats:
+        print_stats_func(
+            train_dataset.X, train_dataset.y,
+            val_dataset.X, val_dataset.y,
+            test_dataset.X, test_dataset.y  
+            )
     return train_dataset.X, train_dataset.y,val_dataset.X, val_dataset.y, test_dataset.X, test_dataset.y
 
 
-def get_data(data, lookback, horizon, n_series, series=None, year=None, print_stats=True):    
+def get_data(data, lookback, horizon, n_series, series=None, year=None, print_stats=False):    
     data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
 
     if data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
-        print('new!!!')
-        return process_data(data, lookback, horizon)
+        return process_data(data, lookback, horizon, print_stats)
 
     if data in ['ecg', 'eeg', 'eeg_3_lead']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_{n_series}series/"
@@ -566,7 +568,7 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
 def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0, stack_types=None, 
                          fourier_granularity=0, poly_degree=0, num_channels=0, series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
                          test_mae=0, train_smape=0, test_smape=0, train_mape=0, test_mape=0, 
-                         train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0):
+                         train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0, std=0):
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
@@ -580,49 +582,79 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
     print(f"file_path = {file_path}")
         
     if Path(file_path).is_file(): 
-        df = pd.read_excel(file_path)
-        # Check if the new columns exist and add them if they do not
-        if 'train_rmsse' not in df.columns:
-            df['train_rmsse'] = pd.NA
-        if 'test_rmsse' not in df.columns:
-            df['test_rmsse'] = pd.NA
-        if 'fourier granularity' not in df.columns:
-            df['fourier granularity'] = pd.NA
-        if 'poly degree' not in df.columns:
-            df['poly degree'] = pd.NA
-    else: df = pd.DataFrame(columns=[
-        "Data", "Lookback", "Horizon", "Epochs", 
-        "Stack types", "Blocks", 
-        "fourier granularity", "poly degree",
-        "num_channels",
-        "train_mse", "test_mse", 
-        "train_mae", "test_mae", 
-        "train_smape", "test_smape", 
-        "train_mape", "test_mape", 
-        "train_mase", "test_mase", 
-        "train_rmsse", "test_rmsse"
+        while True:
+            try:
+                df = pd.read_excel(file_path)
+                # Check if the new columns exist and add them if they do not
+                if 'train_rmsse' not in df.columns:
+                    df['train_rmsse'] = pd.NA
+                if 'test_rmsse' not in df.columns:
+                    df['test_rmsse'] = pd.NA
+                if 'fourier granularity' not in df.columns:
+                    df['fourier granularity'] = pd.NA
+                if 'poly degree' not in df.columns:
+                    df['poly degree'] = pd.NA
+                if 'std' not in df.columns:
+                    df['std'] = pd.NA
+                if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
+                if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
+                    
+                new_row = {"Data": f'{data}', "Lookback": lookback, "Horizon": horizon, 
+                        "Epochs": epochs, "Stack types": stack_types,
+                        "Blocks": blocks, 
+                        "fourier granularity": fourier_granularity, 
+                        "poly degree": poly_degree, 
+                        "num_channels": num_channels,
+                        "std":std,
+                        "train_mse": train_mse, "test_mse": test_mse,  
+                        "train_mae": train_mae, "test_mae": test_mae, 
+                        "train_smape": train_smape, "test_smape": test_smape, 
+                        "train_mape": train_mape, "test_mape": test_mape, 
+                        "train_mase": train_mase, "test_mase": test_mase, 
+                        "train_rmsse": train_rmsse, "test_rmsse": test_rmsse,
+                        }
+                
+                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+
+                df.to_excel(file_path, index=False)
+                break
+            except PermissionError:
+                print("File is in use, waiting to retry...")
+                time.sleep(5)  # Wait 5 seconds before retrying
+    else: 
+        df = pd.DataFrame(columns=[
+            "Data", "Lookback", "Horizon", "Epochs", 
+            "Stack types", "Blocks", 
+            "fourier granularity", "poly degree",
+            "num_channels", "std",
+            "train_mse", "test_mse", 
+            "train_mae", "test_mae", 
+            "train_smape", "test_smape", 
+            "train_mape", "test_mape", 
+            "train_mase", "test_mase", 
+            "train_rmsse", "test_rmsse"
         ])
     
-    if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
-    if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
-        
-    new_row = {"Data": f'{data}', "Lookback": lookback, "Horizon": horizon, 
-               "Epochs": epochs, "Stack types": stack_types,
-               "Blocks": blocks, 
-               "fourier granularity": fourier_granularity, 
-               "poly degree": poly_degree, 
-               "num_channels": num_channels,
-               "train_mse": train_mse, "test_mse": test_mse,  
-               "train_mae": train_mae, "test_mae": test_mae, 
-               "train_smape": train_smape, "test_smape": test_smape, 
-               "train_mape": train_mape, "test_mape": test_mape, 
-               "train_mase": train_mase, "test_mase": test_mase, 
+        if torch.is_tensor(train_mse): train_mse = train_mse.cpu().item()
+        if torch.is_tensor(test_mse): test_mse = test_mse.cpu().item()
+            
+        new_row = {"Data": f'{data}', "Lookback": lookback, "Horizon": horizon, 
+                "Epochs": epochs, "Stack types": stack_types,
+                "Blocks": blocks, 
+                "fourier granularity": fourier_granularity, 
+                "poly degree": poly_degree, 
+                "num_channels": num_channels, "std": std,
+                "train_mse": train_mse, "test_mse": test_mse,  
+                "train_mae": train_mae, "test_mae": test_mae, 
+                "train_smape": train_smape, "test_smape": test_smape, 
+                "train_mape": train_mape, "test_mape": test_mape, 
+                "train_mase": train_mase, "test_mase": test_mase, 
                 "train_rmsse": train_rmsse, "test_rmsse": test_rmsse,
-               }
-    
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                }
+        
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
-    df.to_excel(file_path, index=False)
+        df.to_excel(file_path, index=False)
 
 
 def save_model(model, path_to_save_model, model_name):

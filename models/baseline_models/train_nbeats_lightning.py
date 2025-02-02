@@ -196,10 +196,11 @@ class Model(pl.LightningModule):
             self.test_batch_count = 0
             
     def compute_metrics(self, dataloader):
-        smape_values, mape_values, mase_values = [], [], []
+        mae_values, smape_values, mape_values, mase_values = [], [], [], []
         for batch in dataloader:
             x, y = batch
             y_hat = self.model.predict(x)
+            mae_values.append(np.mean(np.abs(y - y_hat)).item())
             smape_values.append(calculate_smape(y, y_hat).item())
             mape_values.append(calculate_mape(y, y_hat).item())
             mase_result = calculate_mase(y, y_hat)
@@ -208,6 +209,7 @@ class Model(pl.LightningModule):
             else:
                 mase_values.append(mase_result)
         return {
+            'mae': np.mean(mae_values),
             'smape': np.mean(smape_values),
             'mape': np.mean(mape_values),
             'mase': np.mean(mase_values)
@@ -334,8 +336,8 @@ def train_lightning_model(
 
 def main():
     model_type = 'nbeats'
-    data = 'ecg'
-    epochs = [1]
+    data = 'ettm1'
+    epochs = [10]
     blocks = 2
     print(f"data = {data}")
     

@@ -12,7 +12,7 @@ from base_models import TCN
 
 
 sys.path.append('/home/noam.koren/multiTS/NFT/')
-from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps
+from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
 from models.training_functions import train_model, evaluate_model
 
 sys.path.append('NFT/')
@@ -101,16 +101,28 @@ def main(
 
 
 if __name__ == "__main__":
-    data = 'seasonality'
+    data = 'chorales'
     print(f'data={data}')
     
     for lookback, horizon in data_to_steps[data]:
-        main(
-            data=data,
-            lookback=lookback,
-            horizon=horizon,
-            num_epochs=10,
-            plot_epoch=100,
-            batch_size=32,
-            series=None,#'E00001', # "AEM00041194" #"AG000060590"
-        )
+        if data in ['eeg_single', 'ecg_single', 'noaa', 'mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
+            for series in single_data_to_series_list[data]:
+              main(
+                data=data,
+                lookback=lookback,
+                horizon=horizon,
+                num_epochs=10,
+                plot_epoch=100,
+                batch_size=32,
+                series=series,#'E00001', # "AEM00041194" #"AG000060590"
+                )              
+        else:            
+            main(
+                data=data,
+                lookback=lookback,
+                horizon=horizon,
+                num_epochs=10,
+                plot_epoch=100,
+                batch_size=32,
+                series=None,#'E00001', # "AEM00041194" #"AG000060590"
+                )
