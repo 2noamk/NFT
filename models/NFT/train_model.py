@@ -9,7 +9,7 @@ import pandas as pd
 # sys.path.append('NFT/models/NFT/')
 # from NFT_NFT import NFT
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT')
+sys.path.append('NFT/models/NFT')
 from NFT import NFT
 
 
