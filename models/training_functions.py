@@ -529,44 +529,90 @@ def evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y):
         f"train MAPE = {train_mase}\n"
         f"val MAPE = {val_mase}\n"
         f"test MAPE = {test_mase}\n")
-    
-    model.eval()
+    import torch.nn.functional as F
 
-    train_pred = model.predict(train_X).clone().detach() # torch.tensor(tcn_model.predict(train_X), device=device).float()
-    val_pred = model.predict(val_X).clone().detach() # torch.tensor(tcn_model.predict(val_X), device=device).float()
+    def mse_loss_in_chunks(pred, target, chunk_size=1024):
+        """
+        Computes MSE loss between pred and target in smaller chunks to avoid CUDA OOM.
+        Returns the mean MSE across the entire tensor.
+        """
+        assert pred.shape == target.shape
+        device = pred.device
+        total_loss = 0.0
+        total_elems = 0
+
+        for i in range(0, pred.shape[0], chunk_size):
+            pred_chunk = pred[i:i+chunk_size]
+            target_chunk = target[i:i+chunk_size]
+            chunk_loss = F.mse_loss(pred_chunk, target_chunk, reduction='sum')
+            total_loss += chunk_loss.item()
+            total_elems += pred_chunk.numel()
+
+        return torch.tensor(total_loss / total_elems, device=device)
+
+    def calculate_mae_in_chunks(y_true, y_pred, chunk_size=1024):
+        """
+        Calculates MAE in chunks to reduce memory usage.
+        Returns the same result as torch.mean(torch.abs(y_pred - y_true)).item()
+        """
+        assert y_true.shape == y_pred.shape
+        device = y_pred.device
+        total_abs_error = 0.0
+        total_elements = 0
+
+        for i in range(0, y_pred.shape[0], chunk_size):
+            y_pred_chunk = y_pred[i:i+chunk_size]
+            y_true_chunk = y_true[i:i+chunk_size]
+            abs_error_sum = torch.sum(torch.abs(y_pred_chunk - y_true_chunk))
+            total_abs_error += abs_error_sum.item()
+            total_elements += y_pred_chunk.numel()
+
+        return total_abs_error / total_elements
+
+    model.eval()
+    
+    train_pred = val_pred = test_pred = train_mse = test_mse = train_mae = test_mae = train_smape = test_smape = 0
+    train_mape = test_mape = train_mase = test_mase = 0
+
+
+    # train_pred = model.predict(train_X).clone().detach() # torch.tensor(tcn_model.predict(train_X), device=device).float()
+    # val_pred = model.predict(val_X).clone().detach() # torch.tensor(tcn_model.predict(val_X), device=device).float()
     test_pred = model.predict(test_X).clone().detach() # torch.tensor(tcn_model.predict(test_X), device=device).float()
 
-    train_mse = F.mse_loss(train_pred.to(device), train_y.to(device))
-    val_mse = F.mse_loss(val_pred.to(device), val_y.to(device))
-    test_mse = F.mse_loss(test_pred.to(device), test_y.to(device))
+    test_mse = mse_loss_in_chunks(test_pred.to(device), test_y.to(device))
+    # train_mse = F.mse_loss(train_pred.to(device), train_y.to(device))
+    # val_mse = F.mse_loss(val_pred.to(device), val_y.to(device))
+    # test_mse = F.mse_loss(test_pred.to(device), test_y.to(device))
     
-    train_mae = calculate_mae(train_pred, train_y)
-    val_mae = calculate_mae(val_pred, val_y)
-    test_mae = calculate_mae(test_pred, test_y)
+    test_mae = calculate_mae_in_chunks(test_pred.to(device), test_y.to(device))
+    
+    # train_mae = calculate_mae(train_pred, train_y)
+    # val_mae = calculate_mae(val_pred, val_y)
+    # test_mae = calculate_mae(test_pred, test_y)
 
-    train_smape = calculate_smape(train_pred, train_y)
-    val_smape = calculate_smape(val_pred, val_y)
-    test_smape = calculate_smape(test_pred, test_y)
+    # train_smape = calculate_smape(train_pred, train_y)
+    # val_smape = calculate_smape(val_pred, val_y)
+    # test_smape = calculate_smape(test_pred, test_y)
     
-    train_mape = calculate_mape(train_pred, train_y)
-    val_mape = calculate_mape(val_pred, val_y)
-    test_mape = calculate_mape(test_pred, test_y)
+    # train_mape = calculate_mape(train_pred, train_y)
+    # val_mape = calculate_mape(val_pred, val_y)
+    # test_mape = calculate_mape(test_pred, test_y)
     
-    train_mase = calculate_mase(train_pred, train_y)
-    val_mase = calculate_mase(val_pred, val_y)
-    test_mase = calculate_mase(test_pred, test_y)
+    # train_mase = calculate_mase(train_pred, train_y)
+    # val_mase = calculate_mase(val_pred, val_y)
+    # test_mase = calculate_mase(test_pred, test_y)
     
-    print_evaluation(train_mse, val_mse, test_mse,
-                     train_mae, val_mae, test_mae,
-                     train_smape, val_smape, test_smape, 
-                     train_mape, val_mape, test_mape,
-                     train_mase, val_mase, test_mase)
+    # print_evaluation(train_mse, val_mse, test_mse,
+    #                  train_mae, val_mae, test_mae,
+    #                  train_smape, val_smape, test_smape, 
+    #                  train_mape, val_mape, test_mape,
+    #                  train_mase, val_mase, test_mase)
     
     return train_pred, val_pred, test_pred, train_mse, test_mse, train_mae, test_mae, train_smape, test_smape, train_mape, test_mape, train_mase, test_mase
 
 
 def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0, stack_types=None, 
-                         fourier_granularity=0, poly_degree=0, num_channels=0, series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
+                         fourier_granularity=0, poly_degree=0, num_channels=0, layers_type='tcn', series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
                          test_mae=0, train_smape=0, test_smape=0, train_mape=0, test_mape=0, 
                          train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0, std=0):
     base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
@@ -577,7 +623,7 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
     if series is not None:
         data = f"{data}_{series}_{year}"
         
-    file_path = f"{base_dir}/{model}_{data}_results.xlsx"
+    file_path = f"{base_dir}/{model}_{data}_{horizon}_results.xlsx"
     
     print(f"file_path = {file_path}")
         
@@ -605,6 +651,7 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
                         "fourier granularity": fourier_granularity, 
                         "poly degree": poly_degree, 
                         "num_channels": num_channels,
+                        "layers_type": layers_type,
                         "std":std,
                         "train_mse": train_mse, "test_mse": test_mse,  
                         "train_mae": train_mae, "test_mae": test_mae, 
@@ -620,13 +667,13 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
                 break
             except PermissionError:
                 print("File is in use, waiting to retry...")
-                time.sleep(5)  # Wait 5 seconds before retrying
+                # time.sleep(5)  # Wait 5 seconds before retrying
     else: 
         df = pd.DataFrame(columns=[
             "Data", "Lookback", "Horizon", "Epochs", 
             "Stack types", "Blocks", 
             "fourier granularity", "poly degree",
-            "num_channels", "std",
+            "num_channels", "layers_type", "std",
             "train_mse", "test_mse", 
             "train_mae", "test_mae", 
             "train_smape", "test_smape", 
@@ -643,7 +690,8 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
                 "Blocks": blocks, 
                 "fourier granularity": fourier_granularity, 
                 "poly degree": poly_degree, 
-                "num_channels": num_channels, "std": std,
+                "num_channels": num_channels, 
+                "layers_type": layers_type, "std": std,
                 "train_mse": train_mse, "test_mse": test_mse,  
                 "train_mae": train_mae, "test_mae": test_mae, 
                 "train_smape": train_smape, "test_smape": test_smape, 

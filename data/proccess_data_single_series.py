@@ -77,7 +77,7 @@ def process_data(data, lookback, horizon, series=None, year=None, with_date=True
 
 
 def main():
-    data = 'eeg_single'
+    data = 'noaa'
     if data == 'seasonal_trend_test':
          for seasonal_amplitude in [4, 5, 6, 7, 8]:#[0.05, 0.1, 0.15, 0.2]:
             for trend_amplitude in [0.2]:#[30, 40, 50, 60]:

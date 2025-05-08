@@ -39,55 +39,96 @@ class FC(nn.Module):
         return predictions
 
 
+# class LSTM(nn.Module):
+#     def __init__(self, 
+#                  num_vars, 
+#                  lookback, 
+#                  horizon, 
+#                  hidden_dim, 
+#                  num_layers
+#                  ):
+#         super(LSTM, self).__init__()
+#         self.hidden_dim = hidden_dim
+
+#         self.lstm = nn.LSTM(num_vars, hidden_dim, num_layers, batch_first=True) #shape torch.Size([batch, lookback, hidden])
+
+#         self.linear1 = nn.Linear(hidden_dim, num_vars) #shape torch.Size([batch, lookback, num_vars])
+        
+#         self.linear2 = nn.Linear(lookback, horizon) #shape torch.Size([batch, horizon, num_vars])
+
+#     def forward(self, x):
+#         device = x.device  # Get the device of the input data
+
+#         # Initialize hidden and cell states and move them to the correct device
+#         h0 = torch.zeros(self.lstm.num_layers, x.size(0), self.hidden_dim).to(device).requires_grad_()
+#         c0 = torch.zeros(self.lstm.num_layers, x.size(0), self.hidden_dim).to(device).requires_grad_()
+
+#         # print("x", x.shape)
+#         # print("h0", h0.shape)
+#         # print("c0", c0.shape)
+
+#         out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
+#         # print("out", out.shape)
+        
+#         out = self.linear1(out)
+#         # print("out", out.shape)
+        
+#         out = self.linear2(out.transpose(2,1)).transpose(2,1)
+#         # print("out", out.shape)
+        
+#         return out
+   
+#     def predict(self, x):
+#         """
+#         Predict the output given input data x.
+#         :param x: Input data
+#         :return: Model's predictions
+#         """
+#         self.eval()  # Set the model to evaluation mode
+#         with torch.no_grad():
+#             predictions = self.forward(x)
+#         return predictions
+
+
 class LSTM(nn.Module):
     def __init__(self, 
                  num_vars, 
                  lookback, 
                  horizon, 
                  hidden_dim, 
-                 num_layers
-                 ):
+                 num_layers, 
+                 dropout=0.2):
         super(LSTM, self).__init__()
         self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
 
-        self.lstm = nn.LSTM(num_vars, hidden_dim, num_layers, batch_first=True) #shape torch.Size([batch, lookback, hidden])
+        self.lstm = nn.LSTM(num_vars, hidden_dim, num_layers, 
+                            dropout=dropout, batch_first=True)
 
-        self.linear1 = nn.Linear(hidden_dim, num_vars) #shape torch.Size([batch, lookback, num_vars])
-        
-        self.linear2 = nn.Linear(lookback, horizon) #shape torch.Size([batch, horizon, num_vars])
+        self.dropout = nn.Dropout(dropout)
+        self.linear1 = nn.Linear(hidden_dim, num_vars)
+        self.linear2 = nn.Linear(lookback, horizon)
+        self.activation = nn.ReLU()
 
     def forward(self, x):
-        device = x.device  # Get the device of the input data
+        device = x.device
 
-        # Initialize hidden and cell states and move them to the correct device
-        h0 = torch.zeros(self.lstm.num_layers, x.size(0), self.hidden_dim).to(device).requires_grad_()
-        c0 = torch.zeros(self.lstm.num_layers, x.size(0), self.hidden_dim).to(device).requires_grad_()
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(device)
 
-        # print("x", x.shape)
-        # print("h0", h0.shape)
-        # print("c0", c0.shape)
+        out, _ = self.lstm(x, (h0.detach(), c0.detach()))  # [B, T, H]
 
-        out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
-        # print("out", out.shape)
-        
+        out = self.dropout(out)
         out = self.linear1(out)
-        # print("out", out.shape)
-        
-        out = self.linear2(out.transpose(2,1)).transpose(2,1)
-        # print("out", out.shape)
-        
+        out = self.activation(out)
+        out = self.linear2(out.transpose(2, 1)).transpose(2, 1)
+
         return out
-   
+
     def predict(self, x):
-        """
-        Predict the output given input data x.
-        :param x: Input data
-        :return: Model's predictions
-        """
-        self.eval()  # Set the model to evaluation mode
+        self.eval()
         with torch.no_grad():
-            predictions = self.forward(x)
-        return predictions
+            return self.forward(x)
 
 
 class CNNBlock(nn.Module):

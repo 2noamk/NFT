@@ -397,7 +397,7 @@ def main():
     """Choose model: nft / tcn / transformer / lstm / patchtst"""
     model_type = 'tcn'
     """Choose dataset: illness / air_quality / noaa / ecg / ecg_single / eeg_single / chorales"""
-    data = 'illness'
+    data = 'noaa'
     out_txt_name = f"{model_type}_{data}.txt"
     tcn_channels = [[25, 50]]
     num_channels = [2,2]

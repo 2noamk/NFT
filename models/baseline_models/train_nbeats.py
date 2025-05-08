@@ -188,7 +188,7 @@ def train(
     
   
 def main():
-    data = 'electricity'
+    data = 'noaa'
     epochs = [10]
     blocks = 2
     print(f"data = {data}")
