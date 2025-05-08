@@ -18,7 +18,7 @@ ECG = [
     'E00004',
    ]
 
-# pkl_dir = "/home/noam.koren/multiTS/NFT/data/ecg/pkl_files/"
+# pkl_dir = "/home/../multiTS/NFT/data/ecg/pkl_files/"
 
 # ECG = [pkl_file[:-4] for pkl_file in os.listdir(pkl_dir)]
 

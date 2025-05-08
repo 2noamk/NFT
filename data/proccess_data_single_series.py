@@ -1,12 +1,12 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import data_to_steps, single_data_to_series_list, data_to_label_len, noaa_series_to_years, mini_electricity_list, melody_list
 from data.proccess_data_functions import remove_outliers, data_to_raw_data_path, get_df, impute_data, standardize_data, get_datasets, save_to_pkl, plot_data
 
 
 def process_data(data, lookback, horizon, series=None, year=None, with_date=True):
-    path = f"/home/noam.koren/multiTS/NFT/data/"
+    path = f"/home/../multiTS/NFT/data/"
     
     df = remove_outliers(get_df(data_to_raw_data_path(data, series, year)))
     n = len(df)

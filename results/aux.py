@@ -1,7 +1,7 @@
 import pandas as pd
 from collections import defaultdict
 import sys
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import single_data_to_series_list
 
 # Function to calculate min values for each horizon
@@ -28,7 +28,7 @@ def calculate_min_per_horizon(data):
 def calculate_min_per_horizon_across_series(dataset, series_list):
     horizon_min_aggregated = defaultdict(list)
     for series in series_list:
-        file_path = f"/home/noam.koren/multiTS/NFT/results/{dataset}/nft/nft_{dataset}_{series}_None_results.xlsx"
+        file_path = f"/home/../multiTS/NFT/results/{dataset}/nft/nft_{dataset}_{series}_None_results.xlsx"
         data = pd.read_excel(file_path)
         series_horizon_min = calculate_min_per_horizon(data)
         for horizon, min_values in series_horizon_min.items():
@@ -49,7 +49,7 @@ def calculate_min_per_horizon_across_series(dataset, series_list):
 def get_min_vals():
     # For datasets without series splitting
     for dataset in ['air_quality', 'chorales', 'ettm1', 'traffic', 'electricity', 'exchange']:
-        file_path = f"/home/noam.koren/multiTS/NFT/results/{dataset}/nft/nft_{dataset}_results.xlsx"
+        file_path = f"/home/../multiTS/NFT/results/{dataset}/nft/nft_{dataset}_results.xlsx"
         data = pd.read_excel(file_path)
         min_values_per_horizon = calculate_min_per_horizon(data)
         print(f"Min values per horizon for {dataset}:")

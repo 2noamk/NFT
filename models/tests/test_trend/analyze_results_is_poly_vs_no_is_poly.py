@@ -18,7 +18,7 @@ def count_is_poly(df, group_by_fields):
     return df.groupby(group_by_fields + ['Is Poly']).size().unstack(fill_value=0)
 
 if __name__ == "__main__":  
-    base_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/'
+    base_path = '/home/../multiTS/NFT/models/tests/test_trend/'
 
     df = pd.read_excel(base_path + 'evaluate_trend_syntatic_data.xlsx')
     

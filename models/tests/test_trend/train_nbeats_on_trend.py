@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 from torch.nn import functional as F
 
-models_path = "/home/noam.koren/multiTS/NFT"
+models_path = "/home/../multiTS/NFT"
 if models_path not in sys.path: sys.path.append(models_path)
 
 from models.training_functions import train_model, calculate_smape, calculate_mape, calculate_mase
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     epochs = [15]
     
         
-    excel_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/evaluate_nbeats_trend_on_syntatic_data.xlsx'
+    excel_path = '/home/../multiTS/NFT/models/tests/test_trend/evaluate_nbeats_trend_on_syntatic_data.xlsx'
 
     for s in steps:
         lookback, horizon = s

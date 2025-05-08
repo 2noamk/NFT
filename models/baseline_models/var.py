@@ -3,7 +3,7 @@ from statsmodels.tsa.api import VAR
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import numpy as np
 import sys
-sys.path.append('/home/noam.koren/multiTS/NFT/models/NFT')
+sys.path.append('/home/../multiTS/NFT/models/NFT')
 from NFT import NFT
 
 import torch.nn.functional as F

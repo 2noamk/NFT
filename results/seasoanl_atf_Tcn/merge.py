@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # Define the root directory containing the subdirectories
-root_dir = "/home/noam.koren/multiTS/NFT/results/seasonal_itrans/"  # Replace with your actual directory path
+root_dir = "/home/../multiTS/NFT/results/seasonal_itrans/"  # Replace with your actual directory path
 
 # Initialize an empty list to collect data
 data_list = []

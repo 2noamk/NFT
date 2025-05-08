@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 import warnings
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/data/')
+sys.path.append('/home/../multiTS/NFT/data/')
 from augmentation import run_augmentation_single
 
 warnings.filterwarnings('ignore')
@@ -71,7 +71,7 @@ def process_data(seq_len, root_path, dataset_name, flag='train',
     if save_data:
         print("self.data_x.shape, self.data_y.shape, self.data_stamp.shape", data_x.shape, data_y.shape)
         import pickle
-        p = f'/home/noam.koren/multiTS/NFT/data/{dataset_name}/'
+        p = f'/home/../multiTS/NFT/data/{dataset_name}/'
         print(p)
         if not os.path.exists(p): os.makedirs(p)
         with open(f"{p}{flag}_X.pkl", 'wb') as f: pickle.dump(data_x, f)

@@ -1,16 +1,16 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 
 from lists import Stations
 import pandas as pd
 import pickle
 import os
 
-base_dir = '/home/noam.koren/multiTS/NFT/data/noaa/noaa_ghcn/'
+base_dir = '/home/../multiTS/NFT/data/noaa/noaa_ghcn/'
 
 for station in Stations:
-    output_dir = f'/home/noam.koren/multiTS/NFT/data/noaa/noaa_ghcn/years/original/{station}/'
+    output_dir = f'/home/../multiTS/NFT/data/noaa/noaa_ghcn/years/original/{station}/'
 
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 

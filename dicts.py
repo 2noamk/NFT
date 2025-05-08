@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from lists import Stations, EEG, ETT, ECG, air_quality_seasonal_2_var_list, noaa_AEM00041217_years, noaa_AEM00041194_years, noaa_AE000041196_years, mini_electricity_list, melody_list, air_quality_seasonal_list
 
 data_to_num_cols = {

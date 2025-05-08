@@ -14,7 +14,7 @@ import pickle
 import torch
 import os
 import sys
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import data_to_label_len 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,7 +92,7 @@ def read_all_data_and_print_stats(data_path, dataset=None, print_stats=False):
 
 
 def process_data(data, lookback, horizon, print_stats=False):
-    path = f"/home/noam.koren/multiTS/NFT/data/{data}/"
+    path = f"/home/../multiTS/NFT/data/{data}/"
     
     train_X = pd.read_pickle(path + 'train_X.pkl')
     train_y = pd.read_pickle(path + 'train_y.pkl')
@@ -133,7 +133,7 @@ def process_data(data, lookback, horizon, print_stats=False):
 
 
 def get_data(data, lookback, horizon, n_series, series=None, year=None, print_stats=False):    
-    data_path=f"/home/noam.koren/multiTS/NFT/data/{data}/"
+    data_path=f"/home/../multiTS/NFT/data/{data}/"
 
     if data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
         return process_data(data, lookback, horizon, print_stats)
@@ -143,13 +143,13 @@ def get_data(data, lookback, horizon, n_series, series=None, year=None, print_st
     elif data in ['eeg_single', 'ecg_single', 'noaa', 'ett']:
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
     elif data[:4] == 'noaa':
-        data_path = f'/home/noam.koren/multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
+        data_path = f'/home/../multiTS/NFT/data/{data[:4]}/years/{series}/{series}_{year}_{lookback}l_{horizon}h/'
     elif data in ['electricity', 'exchange', 'illness', 'traffic', 'etth1', 'etth2', 'ettm1', 'ettm2']:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h_0label/"
     elif data in ['mini_electricity', 'air_quality_seasonal', 'air_quality_seasonal_2_var']:
         data_path = data_path + f"{series}/{series}_{lookback}l_{horizon}h/"
     elif data[:9] == "seasonal_":
-        data_path = f"/home/noam.koren/multiTS/NFT/data/generated/{data}/{data}_{lookback}l_{horizon}h/"
+        data_path = f"/home/../multiTS/NFT/data/generated/{data}/{data}_{lookback}l_{horizon}h/"
     else:
         data_path = data_path + f"{data}_{lookback}l_{horizon}h/"
 
@@ -615,7 +615,7 @@ def add_results_to_excel(model, data, lookback=0, horizon=0, epochs=0, blocks=0,
                          fourier_granularity=0, poly_degree=0, num_channels=0, layers_type='tcn', series=None, year=None, train_mse=0, test_mse=0, train_mae=0, 
                          test_mae=0, train_smape=0, test_smape=0, train_mape=0, test_mape=0, 
                          train_mase=0, test_mase=0, train_rmsse=0, test_rmsse=0, std=0):
-    base_dir = f"/home/noam.koren/multiTS/NFT/results/{data}/{model}"
+    base_dir = f"/home/../multiTS/NFT/results/{data}/{model}"
     
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
@@ -721,7 +721,7 @@ def get_model_name(model_type, data, lookback, horizon, epochs, blocks, layers_t
 
 
 def get_path(model_name, data, model_type):
-    trained_models_path=f"/home/noam.koren/multiTS/NFT/models/trained_models/"
+    trained_models_path=f"/home/../multiTS/NFT/models/trained_models/"
     path_to_save_model = trained_models_path + f"{data}/{model_type}/{model_name}/"    
     path_to_save_checkpoint_models = path_to_save_model + "models_during_train/"
     path_to_save_loss_plots = path_to_save_model + "loss_plots/"
@@ -742,7 +742,7 @@ def add_num_of_params_to_excel(dataset_name, model, total_params):
     }
     df = pd.DataFrame(data)
     
-    file_path = '/home/noam.koren/multiTS/NFT/results/num_of_parameters.xlsx'
+    file_path = '/home/../multiTS/NFT/results/num_of_parameters.xlsx'
     
     if os.path.exists(file_path):
         df_existing = pd.read_excel(file_path)
@@ -760,7 +760,7 @@ def add_run_time_to_excel(dataset_name, model, time):
     }
     df = pd.DataFrame(data)
     
-    file_path = '/home/noam.koren/multiTS/NFT/results/run_time.xlsx'
+    file_path = '/home/../multiTS/NFT/results/run_time.xlsx'
     
     if os.path.exists(file_path):
         df_existing = pd.read_excel(file_path)

@@ -7,11 +7,11 @@ import pandas as pd
 from torch.utils.data import Dataset
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/models/baseline_models')
+sys.path.append('/home/../multiTS/NFT/models/baseline_models')
 from base_models import TCN
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_of_series, data_to_steps, single_data_to_series_list
 from models.training_functions import train_model, evaluate_model
 

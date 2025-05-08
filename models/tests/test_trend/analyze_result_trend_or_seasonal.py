@@ -1,6 +1,6 @@
 import pandas as pd
 
-base_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/'
+base_path = '/home/../multiTS/NFT/models/tests/test_trend/'
 
 df = pd.read_excel(f'{base_path}evaluate_trend_on_syntatic_data.xlsx') 
 

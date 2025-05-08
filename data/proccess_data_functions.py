@@ -44,7 +44,7 @@ class dataset(Dataset):
    
    
 def data_to_raw_data_path(data, series=None, year=None):
-    base_path = "/home/noam.koren/multiTS/NFT/data/"
+    base_path = "/home/../multiTS/NFT/data/"
     path_mappings = {
         'noaa': lambda: f'{base_path}noaa/noaa_ghcn/noaa_pkl/{series}.pkl',
         'ecg_single': lambda: f'{base_path}ecg/pkl_files/{series}.pkl',

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-BASE_PATH = "/home/noam.koren/multiTS/NFT/"
+BASE_PATH = "/home/../multiTS/NFT/"
 sys.path.append(BASE_PATH)
 from models.NFT.NFT import NFT
 from dicts import data_to_num_vars_dict, data_to_label_len, data_to_steps, data_to_num_nft_blocks, data_to_num_of_series, single_data_to_series_list, noaa_series_to_years

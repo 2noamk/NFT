@@ -3,7 +3,7 @@ import os
 model = 'nft'
 for model in ['nft', 'DLinear', 'PatchTST', 'TimesNet']: #
     # Specify the directory containing the Excel files
-    directory = f"/home/noam.koren/multiTS/NFT/results/air_quality_seasonal_2_var/{model}"
+    directory = f"/home/../multiTS/NFT/results/air_quality_seasonal_2_var/{model}"
 
     # Create an empty list to store DataFrames
     dfs = []

@@ -107,12 +107,12 @@ def create_time_series(
 
     
     if save_data:
-        directory = f'/home/noam.koren/multiTS/NFT/data/{series_name}/'
+        directory = f'/home/../multiTS/NFT/data/{series_name}/'
         file_path = os.path.join(directory, f'{series_name}.pkl')
         os.makedirs(directory, exist_ok=True)
         synthetic_data.to_pickle(file_path)
         
-        save_to_excel(component_info, '/home/noam.koren/multiTS/NFT/models/tests/analyse_data/data_components.xlsx')
+        save_to_excel(component_info, '/home/../multiTS/NFT/models/tests/analyse_data/data_components.xlsx')
 
 def get_components(y):
     
@@ -186,11 +186,11 @@ def calculate_components_dominance(data, data_name, save_excel=False, average=Tr
     component_info, averages_df = process_component_info(seasonality_trend_info, series_name=data_name)
     d = averages_df if average else component_info
     if save_excel:
-        save_to_excel(d, f'/home/noam.koren/multiTS/NFT/models/tests/analyse_data/{data_name}_components.xlsx')
+        save_to_excel(d, f'/home/../multiTS/NFT/models/tests/analyse_data/{data_name}_components.xlsx')
 
     return component_info, averages_df
 
 
 
-data = pd.read_pickle('/home/noam.koren/multiTS/NFT/data/air_quality/air_quality.pkl')
+data = pd.read_pickle('/home/../multiTS/NFT/data/air_quality/air_quality.pkl')
 component_info, averages_df = calculate_components_dominance(data, data_name='air_quality', save_excel=True, average=False)

@@ -12,7 +12,7 @@ import sys
 import os
 
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import data_to_steps
 class dataset(Dataset):
     def __init__(self, X, y, lookback, horizon, label_len=0, data_stamp=None):
@@ -58,7 +58,7 @@ class dataset(Dataset):
 
 
 def embed_data(data='traffic', lookback=96, label_len=0, horizons=1, add_data_stamp=False):
-    base_path = f'/home/noam.koren/multiTS/NFT/data/{data}/' 
+    base_path = f'/home/../multiTS/NFT/data/{data}/' 
 
     for flag in ['train', 'val', 'test']:
         X = torch.tensor(pd.read_pickle(f'{base_path}{flag}_X.pkl'))

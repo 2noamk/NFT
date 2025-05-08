@@ -34,8 +34,8 @@ def pkl_to_csv(pkl_file, csv_file):
         print(f"Error converting {pkl_file} to CSV: {e}")
 
 # Example usage
-pkl_file = "/home/noam.koren/multiTS/NFT/data/illness/illness_36l_12h_0label/test_X.pkl"  # Replace with your .pkl file path
-csv_file = "/home/noam.koren/multiTS/NFT/data/illness/illness_36l_12h_0label/test_X.csv"  # Replace with your .csv file path
+pkl_file = "../multiTS/NFT/data/illness/illness_36l_12h_0label/test_X.pkl"  # Replace with your .pkl file path
+csv_file = "../multiTS/NFT/data/illness/illness_36l_12h_0label/test_X.csv"  # Replace with your .csv file path
 pkl_to_csv(pkl_file, csv_file)
 
 
@@ -69,8 +69,8 @@ pkl_to_csv(pkl_file, csv_file)
 #         print(f"Error comparing pickle files: {e}")
 #         return False
 # # Example usage
-# file1 = "/home/noam.koren/multiTS/NFT/data/exchange_rate/test_X.pkl"  # Replace with your file path
-# file2 = "/home/noam.koren/multiTS/NFT/data/exchange/test_X.pkl"  # Replace with your file path
+# file1 = "../multiTS/NFT/data/exchange_rate/test_X.pkl"  # Replace with your file path
+# file2 = "../multiTS/NFT/data/exchange/test_X.pkl"  # Replace with your file path
 
 # # print(are_pickles_identical(file1, file2))
 

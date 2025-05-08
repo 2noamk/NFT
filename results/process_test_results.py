@@ -4,7 +4,7 @@ import pandas as pd
 
 def create_excel_for_each_seasonal_trend():
     # Base directory containing the results
-    base_dir = "/home/noam.koren/multiTS/NFT/results"
+    base_dir = "/home/../multiTS/NFT/results"
 
     # Create an output directory for the merged Excel files
     output_dir = os.path.join(base_dir, "merged_results")
@@ -63,7 +63,7 @@ from openpyxl.styles import PatternFill
 
 def consolidate_results_with_highlighting():
     # Base directory containing the results
-    base_dir = "/home/noam.koren/multiTS/NFT/results"
+    base_dir = "/home/../multiTS/NFT/results"
     output_dir = os.path.join(base_dir, "merged_results")
     consolidated_file = os.path.join(output_dir, "structured_results_highlighted.xlsx")
     
@@ -231,7 +231,7 @@ create_excel_for_each_seasonal_trend()
 # Call the function to consolidate and structure the results
 consolidate_results_with_highlighting()
 # Example usage after generating the consolidated file
-consolidated_file = "/home/noam.koren/multiTS/NFT/results/merged_results/structured_results_highlighted.xlsx"
+consolidated_file = "/home/../multiTS/NFT/results/merged_results/structured_results_highlighted.xlsx"
 seasonal_amplitudes = [
 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 4, 5, 6, 7, 8]
 highlight_cells_with_colors(consolidated_file, seasonal_amplitudes)

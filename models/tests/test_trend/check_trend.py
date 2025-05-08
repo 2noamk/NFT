@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
-models_path = "/home/noam.koren/multiTS/NFT"
+models_path = "/home/../multiTS/NFT"
 if models_path not in sys.path: sys.path.append(models_path)
 
 from models.NFT.NFT import NFT
@@ -131,7 +131,7 @@ def train_model_and_save_evals(lookback, horizon, n_vars, stack_types, thetas_di
 
     _, _, _, _, test_mse, _, test_smape, _, _, _, test_mase = evaluate_model(model, train_X, train_y, val_X, val_y, test_X, test_y)
     
-    file_path = '/home/noam.koren/multiTS/NFT/models/tests/test_trend/evaluate_sinusodial_trend_on_syntatic_data.xlsx'
+    file_path = '/home/../multiTS/NFT/models/tests/test_trend/evaluate_sinusodial_trend_on_syntatic_data.xlsx'
 
     if Path(file_path).is_file(): df = pd.read_excel(file_path)
     else: df = pd.DataFrame(columns=["Lookback", "Horizon", "Vars", "Epochs", "Stacks", 

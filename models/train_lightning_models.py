@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from nbeats_pytorch.model import NBeatsNet
 from torch.utils.data import DataLoader, TensorDataset
 
-sys.path.append('/home/noam.koren/multiTS/NFT/')
+sys.path.append('/home/../multiTS/NFT/')
 from dicts import data_to_num_vars_dict, data_to_num_nft_blocks, data_to_num_of_series, data_to_steps, single_data_to_series_list, data_to_label_len
 # from lists import noaa_years
 from models.training_functions import add_run_time_to_excel, calculate_rmsse, add_num_of_params_to_excel, get_data, calculate_smape, calculate_mape, calculate_mase, calculate_mae, add_results_to_excel, get_model_name, get_path, save_model

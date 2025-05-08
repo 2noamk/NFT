@@ -5,7 +5,7 @@ import torch.nn as nn
 import pandas as pd
 from pathlib import Path
 from torch.utils.data import Dataset
-BASE_PATH = "/home/noam.koren/multiTS/NFT/"
+BASE_PATH = "/home/../multiTS/NFT/"
 
 
 class Noiser(nn.Module):
@@ -132,7 +132,7 @@ def train_gan_forecaster(train_loader, test_loader, forecaster, noiser,
 
 
 def add_gan_results_to_excel(model, data, **kwargs):
-    directory = f"/home/noam.koren/multiTS/NFT/results/{data}/gan"
+    directory = f"/home/../multiTS/NFT/results/{data}/gan"
     os.makedirs(directory, exist_ok=True)
     path = os.path.join(directory, f"{model}_results.xlsx")
     df = pd.DataFrame([kwargs])
@@ -140,7 +140,7 @@ def add_gan_results_to_excel(model, data, **kwargs):
     
 
 def add_gan_results_to_excel(model, data, **kwargs):
-    directory = f"/home/noam.koren/multiTS/NFT/results/{data}/gan"
+    directory = f"/home/../multiTS/NFT/results/{data}/gan"
     os.makedirs(directory, exist_ok=True)
 
     path = os.path.join(directory, f"{model}_results.xlsx")
